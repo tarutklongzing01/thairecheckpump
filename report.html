@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Report | Thairecheckpump</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css?v=20260321-8" />
+    <script type="module" src="firebase-app.js?v=20260321-8"></script>
+  </head>
+  <body data-page="report">
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="container topbar">
+          <a class="brand" href="index.html">
+            <span class="brand-mark"></span>
+            <span class="brand-copy">
+              <strong>Thairecheckpump</strong>
+              <small>ส่งรายงานสถานี</small>
+            </span>
+          </a>
+          <nav class="nav-list" aria-label="เมนูหลัก">
+            <a class="nav-link" href="index.html" data-nav="home">แผนที่</a>
+            <a class="nav-link" href="feed.html" data-nav="feed">ฟีด</a>
+            <a class="nav-link" href="report.html" data-nav="report">รายงาน</a>
+            <a class="nav-link" href="gallery.html" data-nav="gallery">คลังภาพ</a>
+            <a class="nav-link" href="dashboard.html" data-nav="dashboard">ข้อมูล</a>
+            <a class="nav-link" href="about.html" data-nav="about">เกี่ยวกับ</a>
+          </nav>
+          <a class="button button-outline" href="feed.html">ดูฟีดสด</a>
+        </div>
+        <div class="container">
+          <div class="statusbar">
+            <div class="status-cluster">
+              <span class="tiny-badge" data-live-mode>กำลังเริ่มต้นระบบ</span>
+              <span class="tiny-badge" data-auth-state>Auth: -</span>
+              <span class="tiny-badge" data-location-state>Location: -</span>
+            </div>
+            <div class="status-cluster">
+              <span class="muted" data-live-hint>รายงานจะส่งขึ้น Firestore และรูปจะขึ้น Storage เมื่อ config พร้อม</span>
+              <button class="button button-ghost" type="button" data-request-location>ใช้ตำแหน่งฉัน</button>
+              <button class="button button-primary" type="button" data-google-sign-in>เข้าสู่ระบบด้วย Google</button>
+              <button class="button button-outline" type="button" data-google-sign-out hidden>ออกจากระบบ</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container report-layout">
+            <div class="panel section-reveal">
+              <span class="eyebrow">Community Report</span>
+              <h1 class="subheadline">แจ้งสถานีและสถานะน้ำมันล่าสุด</h1>
+              <p class="lede">ทุกคนยังเข้ามาดูข้อมูลได้ตามปกติ ส่วนการส่งรายงานจริงจะใช้ Google sign-in เพื่อระบุตัวตนผู้แจ้งก่อนบันทึกเข้า Firestore</p>
+              <section class="panel panel-muted auth-panel" data-auth-panel data-report-auth-panel style="margin-top: 22px">
+                <span class="eyebrow">Google Login</span>
+                <h2 data-report-auth-title>เข้าสู่ระบบด้วย Google ก่อนส่งรายงาน</h2>
+                <p class="lede" data-report-auth-copy>ล็อกอินแล้วระบบจะบันทึกรายงานในชื่อบัญชี Google ของคุณ และหน้าอื่นยังเปิดอ่านได้สาธารณะเหมือนเดิม</p>
+                <div class="message-box" aria-live="polite" data-auth-message data-report-auth-message></div>
+              </section>
+              <form class="form-grid" data-report-form style="margin-top: 22px">
+                <label class="field">
+                  <span>ชื่อปั๊ม</span>
+                  <input class="input" type="text" name="station" placeholder="เช่น ปตท. บางนา กม.5" required />
+                </label>
+                <label class="field">
+                  <span>แบรนด์</span>
+                  <select name="brand" required>
+                    <option value="">เลือกแบรนด์</option>
+                    <option value="ปตท.">ปตท.</option>
+                    <option value="บางจาก">บางจาก</option>
+                    <option value="PT">PT</option>
+                    <option value="Shell">Shell</option>
+                    <option value="Esso">Esso</option>
+                    <option value="ซัสโก้">ซัสโก้</option>
+                    <option value="Caltex">Caltex</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>พื้นที่</span>
+                  <input class="input" type="text" name="area" placeholder="เช่น พระโขนง" />
+                </label>
+                <label class="field">
+                  <span>ระยะโดยประมาณ (กม.)</span>
+                  <input class="input" type="number" name="distance" min="0.5" max="20" step="0.1" value="2" />
+                </label>
+                <label class="field">
+                  <span>ละติจูด</span>
+                  <input class="input" type="number" name="latitude" step="0.000001" placeholder="จะกรอกให้อัตโนมัติเมื่ออนุญาตตำแหน่ง" data-lat-input />
+                </label>
+                <label class="field">
+                  <span>ลองจิจูด</span>
+                  <input class="input" type="number" name="longitude" step="0.000001" placeholder="จะกรอกให้อัตโนมัติเมื่ออนุญาตตำแหน่ง" data-lng-input />
+                </label>
+                <label class="field">
+                  <span>ชนิดน้ำมัน</span>
+                  <select name="fuel" required>
+                    <option value="">เลือกเชื้อเพลิง</option>
+                    <option value="diesel">ดีเซล</option>
+                    <option value="gas91">แก๊สโซฮอล์ 91</option>
+                    <option value="gas95">แก๊สโซฮอล์ 95</option>
+                    <option value="e20">E20</option>
+                    <option value="e85">E85</option>
+                    <option value="lpg">LPG</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>สถานะ</span>
+                  <select name="status" required>
+                    <option value="">เลือกสถานะ</option>
+                    <option value="high">พร้อมจ่าย</option>
+                    <option value="medium">เหลือน้อย</option>
+                    <option value="low">ใกล้หมด</option>
+                    <option value="empty">หมด</option>
+                  </select>
+                </label>
+                <label class="field field-full">
+                  <span>รายละเอียดเพิ่มเติม</span>
+                  <textarea name="note" placeholder="เช่น คิวยาวประมาณ 5 คัน หรือหัวจ่ายบางช่องปิดอยู่"></textarea>
+                </label>
+                <label class="field">
+                  <span>ชื่อผู้รายงาน</span>
+                  <input class="input" type="text" name="reporter" placeholder="ชื่อเล่นหรือชื่อย่อ" />
+                </label>
+                <label class="field">
+                  <span>ภาพประกอบ</span>
+                  <input type="file" name="photo" accept="image/*" data-photo-input />
+                </label>
+                <div class="field field-full">
+                  <button class="button button-primary" type="submit">บันทึกรายงาน</button>
+                  <p class="form-note">ถ้าเชื่อม Firebase Storage สำเร็จ รูปจะถูกอัปโหลดจริง มิฉะนั้นระบบจะบันทึกเฉพาะข้อความรายงานโดยไม่แนบรูป</p>
+                  <p class="form-note" data-location-detail>กด "ใช้ตำแหน่งฉัน" ด้านบนเพื่อกรอกพิกัดอัตโนมัติ หรือกรอกละติจูด/ลองจิจูดเอง</p>
+                  <div class="message-box" aria-live="polite" data-form-message></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="panel section-reveal delay-1">
+              <span class="eyebrow">My Reports</span>
+              <h2>รายงานจากเครื่องนี้</h2>
+              <p class="lede">จำนวนรายการที่เคยส่งจากเบราว์เซอร์นี้: <strong data-report-count>0</strong></p>
+              <div class="report-preview-list" data-user-feed style="margin-top: 18px"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-inner">
+          <span>Thairecheckpump Demo Report</span>
+          <span>หน้า report อ่านข้อมูลได้สาธารณะ แต่การส่งรายงานต้องใช้ Google sign-in | <span data-year></span></span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

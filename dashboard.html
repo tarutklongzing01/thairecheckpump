@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard | Thairecheckpump</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css?v=20260321-8" />
+    <script type="module" src="firebase-app.js?v=20260321-8"></script>
+  </head>
+  <body data-page="dashboard">
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="container topbar">
+          <a class="brand" href="index.html">
+            <span class="brand-mark"></span>
+            <span class="brand-copy">
+              <strong>Thairecheckpump</strong>
+              <small>แดชบอร์ดข้อมูลสถานี</small>
+            </span>
+          </a>
+          <nav class="nav-list" aria-label="เมนูหลัก">
+            <a class="nav-link" href="index.html" data-nav="home">แผนที่</a>
+            <a class="nav-link" href="feed.html" data-nav="feed">ฟีด</a>
+            <a class="nav-link" href="report.html" data-nav="report">รายงาน</a>
+            <a class="nav-link" href="gallery.html" data-nav="gallery">คลังภาพ</a>
+            <a class="nav-link" href="dashboard.html" data-nav="dashboard">ข้อมูล</a>
+            <a class="nav-link" href="about.html" data-nav="about">เกี่ยวกับ</a>
+          </nav>
+          <a class="button button-outline" href="index.html">กลับหน้าเรดาร์</a>
+        </div>
+        <div class="container">
+          <div class="statusbar">
+            <div class="status-cluster">
+              <span class="tiny-badge" data-live-mode>กำลังเริ่มต้นระบบ</span>
+              <span class="tiny-badge" data-auth-state>Auth: -</span>
+              <span class="tiny-badge" data-location-state>Location: -</span>
+            </div>
+            <div class="status-cluster">
+              <span class="muted" data-live-hint>แดชบอร์ดนี้จะสะท้อน snapshot ล่าสุดจาก Firestore</span>
+              <button class="button button-ghost" type="button" data-request-location>ใช้ตำแหน่งฉัน</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container dashboard-top-grid">
+            <div class="panel section-reveal">
+              <span class="eyebrow">Dashboard</span>
+              <h1 class="subheadline">ดูความพร้อมของ <span data-dashboard-fuel-label>ดีเซล</span> แบบรวม</h1>
+              <p class="lede">แดชบอร์ดนี้สรุป coverage, สถานีพร้อมจ่าย, สถานีเสี่ยง และความสดของข้อมูล เพื่อให้เห็นภาพรวมโดยไม่ต้องไล่ดูทีละปั๊ม</p>
+              <div class="chip-set" style="margin-top: 20px" data-dashboard-fuel-chips></div>
+            </div>
+            <div class="panel section-reveal delay-1">
+              <div class="stat-strip">
+                <div class="stat-card">
+                  <span>Coverage</span>
+                  <strong data-dashboard-coverage>0%</strong>
+                </div>
+                <div class="stat-card">
+                  <span>พร้อมจ่าย</span>
+                  <strong data-dashboard-ready>0</strong>
+                </div>
+                <div class="stat-card">
+                  <span>จุดเสี่ยง</span>
+                  <strong data-dashboard-risk>0</strong>
+                </div>
+                <div class="stat-card">
+                  <span>อายุข้อมูลเฉลี่ย</span>
+                  <strong data-dashboard-average>-</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section section-reveal delay-2">
+          <div class="container stack-grid">
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Brands</span>
+                  <h2>ความพร้อมแยกตามแบรนด์</h2>
+                </div>
+              </div>
+              <div class="bar-stack" data-brand-bars></div>
+            </div>
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Fuels</span>
+                  <h2>เชื้อเพลิงที่ยังพร้อมทั่วเครือข่าย</h2>
+                </div>
+              </div>
+              <div class="bar-stack" data-fuel-bars></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section section-reveal delay-3">
+          <div class="container">
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Cadence</span>
+                  <h2>ความสดของข้อมูล</h2>
+                  <p>ยิ่งอัปเดตถี่ ความเชื่อถือของ feed และ radar จะยิ่งดี หน้าเดโมนี้แยกการกระจายตัวตามอายุของรายงานล่าสุดในแต่ละสถานี</p>
+                </div>
+              </div>
+              <div class="bar-stack" data-cadence-bars></div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-inner">
+          <span>Thairecheckpump Demo Dashboard</span>
+          <span>กราฟทุกชิ้นเรนเดอร์จากข้อมูล JS ฝั่ง client โดยไม่ต้องมี dependency เพิ่ม | <span data-year></span></span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

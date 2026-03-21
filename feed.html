@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Feed | Thairecheckpump</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css?v=20260321-8" />
+    <script type="module" src="firebase-app.js?v=20260321-8"></script>
+  </head>
+  <body data-page="feed">
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="container topbar">
+          <a class="brand" href="index.html">
+            <span class="brand-mark"></span>
+            <span class="brand-copy">
+              <strong>Thairecheckpump</strong>
+              <small>ฟีดรายงานสถานี</small>
+            </span>
+          </a>
+          <nav class="nav-list" aria-label="เมนูหลัก">
+            <a class="nav-link" href="index.html" data-nav="home">แผนที่</a>
+            <a class="nav-link" href="feed.html" data-nav="feed">ฟีด</a>
+            <a class="nav-link" href="report.html" data-nav="report">รายงาน</a>
+            <a class="nav-link" href="gallery.html" data-nav="gallery">คลังภาพ</a>
+            <a class="nav-link" href="dashboard.html" data-nav="dashboard">ข้อมูล</a>
+            <a class="nav-link" href="about.html" data-nav="about">เกี่ยวกับ</a>
+          </nav>
+          <a class="button button-outline" href="report.html">ส่งรายงาน</a>
+        </div>
+        <div class="container">
+          <div class="statusbar">
+            <div class="status-cluster">
+              <span class="tiny-badge" data-live-mode>กำลังเริ่มต้นระบบ</span>
+              <span class="tiny-badge" data-auth-state>Auth: -</span>
+              <span class="tiny-badge" data-location-state>Location: -</span>
+            </div>
+            <div class="status-cluster">
+              <span class="muted" data-live-hint>กำลังรอ config หรือ listener จาก Firebase</span>
+              <button class="button button-ghost" type="button" data-request-location>ใช้ตำแหน่งฉัน</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container feed-top-grid">
+            <div class="panel section-reveal">
+              <span class="eyebrow">Feed</span>
+              <h1 class="subheadline">ไทม์ไลน์รายงานจากผู้ใช้และข้อมูลสถานี</h1>
+              <p class="lede">ใช้ฟีดนี้เช็กจุดที่เริ่มเสี่ยงหมดน้ำมัน ดูสถานีที่ยังเติมได้ และเห็นความเคลื่อนไหวล่าสุดตามชนิดเชื้อเพลิงที่ต้องการ</p>
+              <div class="page-hero-actions">
+                <a class="button button-primary" href="report.html">แจ้งสถานีใหม่</a>
+                <a class="button button-ghost" href="gallery.html">ดูคลังภาพ</a>
+              </div>
+            </div>
+            <div class="panel section-reveal delay-1">
+              <div class="stat-strip">
+                <div class="stat-card">
+                  <span>รายงานทั้งหมด</span>
+                  <strong data-feed-total>0</strong>
+                </div>
+                <div class="stat-card">
+                  <span>สถานีเสี่ยง</span>
+                  <strong data-feed-urgent>0</strong>
+                </div>
+                <div class="stat-card">
+                  <span>มีภาพยืนยัน</span>
+                  <strong data-feed-photo>0</strong>
+                </div>
+                <div class="stat-card">
+                  <span>ผู้ร่วมรายงาน</span>
+                  <strong data-feed-contributors>0</strong>
+                  <small data-feed-average-age>-</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section section-reveal delay-2">
+          <div class="container filters-grid">
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Fuel</span>
+                  <h2>คัดตามเชื้อเพลิง</h2>
+                </div>
+              </div>
+              <div class="chip-set" data-feed-fuel-chips></div>
+            </div>
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Status</span>
+                  <h2>คัดตามสถานะ</h2>
+                </div>
+              </div>
+              <div class="chip-set" data-feed-status-chips></div>
+            </div>
+            <div class="panel panel-muted">
+              <span class="eyebrow">Insight</span>
+              <h2>มุมมองที่เหมาะกับฟีด</h2>
+              <p class="lede">ถ้าต้องการหาปั๊มเติมได้ไว ให้เริ่มจาก `พร้อมจ่าย` แล้วค่อยสลับไปดู `ใกล้หมด` หรือ `หมด` เพื่อเลี่ยงจุดเสี่ยง</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section section-reveal delay-3">
+          <div class="container">
+            <div class="section-header">
+              <div>
+                <span class="eyebrow">Timeline</span>
+                <h2>ฟีดอัปเดตล่าสุด</h2>
+              </div>
+            </div>
+            <div class="feed-list" data-feed-list></div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-inner">
+          <span>Thairecheckpump Demo Feed</span>
+          <span>เวลารายงานและการ์ดในหน้า feed ถูกสร้างจากชุดข้อมูลเดโมและ localStorage | <span data-year></span></span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

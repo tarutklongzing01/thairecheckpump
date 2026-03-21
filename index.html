@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Thairecheckpump | ปั๊มไหนมีน้ำมัน? เช็กสถานะแบบเรียลไทม์</title>
+    <meta
+      name="description"
+      content="ต้นแบบเว็บ Thairecheckpump สำหรับเช็กสถานะน้ำมันรายปั๊มแบบเรียลไทม์ พร้อมฟิลเตอร์เชื้อเพลิง แบรนด์ และรัศมีค้นหา"
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="styles.css?v=20260321-8" />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="firebase-app.js?v=20260321-8"></script>
+  </head>
+  <body data-page="home">
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="container topbar">
+          <a class="brand" href="index.html">
+            <span class="brand-mark"></span>
+            <span class="brand-copy">
+              <strong>Thairecheckpump</strong>
+              <small>เช็กสถานะน้ำมันแบบเรียลไทม์</small>
+            </span>
+          </a>
+          <nav class="nav-list" aria-label="เมนูหลัก">
+            <a class="nav-link" href="index.html" data-nav="home">แผนที่</a>
+            <a class="nav-link" href="feed.html" data-nav="feed">ฟีด</a>
+            <a class="nav-link" href="report.html" data-nav="report">รายงาน</a>
+            <a class="nav-link" href="gallery.html" data-nav="gallery">คลังภาพ</a>
+            <a class="nav-link" href="dashboard.html" data-nav="dashboard">ข้อมูล</a>
+            <a class="nav-link" href="about.html" data-nav="about">เกี่ยวกับ</a>
+          </nav>
+          <a class="button button-outline" href="report.html">แจ้งเลย</a>
+        </div>
+        <div class="container">
+          <div class="statusbar">
+            <div class="status-cluster">
+              <span class="tiny-badge" data-live-mode>กำลังเริ่มต้นระบบ</span>
+              <span class="tiny-badge" data-auth-state>Auth: -</span>
+              <span class="tiny-badge" data-location-state>Location: -</span>
+            </div>
+            <div class="status-cluster">
+              <span class="muted" data-live-hint></span>
+              <button class="button button-ghost" type="button" data-request-location>ใช้ตำแหน่งฉัน</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="container hero-grid">
+            <div class="section-reveal">
+              <span class="eyebrow">Live Pump Monitor</span>
+              <h1 class="headline">ปั๊มไหนมีน้ำมัน? <span class="accent-text">เช็กก่อนออก</span></h1>
+              <p class="lede">
+                เว็บชุดนี้ถูกยกจากเดโม static ไปสู่โหมด Firebase-ready เพื่อรองรับ Firestore แบบเรียลไทม์
+                การอัปเดตรายงานสด ตำแหน่งผู้ใช้จากเบราว์เซอร์ และการส่งภาพขึ้น Storage ในหน้าเดียวกัน
+              </p>
+              <div class="hero-actions">
+                <a class="button button-primary" href="#map">เปิดแผนที่สถานี</a>
+                <a class="button button-ghost" href="feed.html">ดูฟีดสด</a>
+              </div>
+            </div>
+
+            <div class="hero-board section-reveal delay-1">
+              <div class="panel">
+                <span class="kicker">สถานะล่าสุด</span>
+                <h2 class="subheadline">ภาพรวมใกล้คุณตอนนี้</h2>
+                <p class="lede" data-home-summary>กำลังติดตามดีเซลในรัศมี 6 กม.</p>
+                <div class="metric-grid" style="margin-top: 18px">
+                  <div class="metric-card">
+                    <span>สถานีที่มองเห็น</span>
+                    <strong data-home-visible>0</strong>
+                    <small>หลังกรองแบรนด์และระยะทาง</small>
+                  </div>
+                  <div class="metric-card">
+                    <span>พร้อมจ่าย</span>
+                    <strong data-home-ready>0</strong>
+                    <small>สถานีที่ยังเติมได้</small>
+                  </div>
+                  <div class="metric-card">
+                    <span>อัปเดตเร็ว</span>
+                    <strong data-home-fast>0</strong>
+                    <small>ข้อมูลใหม่ไม่เกิน 15 นาที</small>
+                  </div>
+                  <div class="metric-card">
+                    <span>รายงานสะสม</span>
+                    <strong data-home-reports>0</strong>
+                    <small>รวมจากชุมชนและข้อมูลเดโม</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section section-reveal delay-2">
+          <div class="container filters-grid">
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Fuel</span>
+                  <h2>เลือกชนิดน้ำมัน</h2>
+                </div>
+              </div>
+              <div class="chip-set" data-fuel-chips></div>
+            </div>
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Brand</span>
+                  <h2>กรองตามแบรนด์</h2>
+                </div>
+              </div>
+              <div class="chip-set" data-brand-chips></div>
+            </div>
+            <div class="panel">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Radius</span>
+                  <h2>รัศมีค้นหา</h2>
+                </div>
+              </div>
+              <div class="range-wrap">
+                <div class="range-meta">
+                  <span class="muted">ใกล้คุณ</span>
+                  <span class="range-value" data-radius-value>6 กม.</span>
+                </div>
+                <input type="range" min="2" max="10" step="1" value="6" data-radius-input />
+                <p class="form-note">เปลี่ยนระยะเพื่อดูจำนวนสถานีและจุดเสี่ยงในพื้นที่รอบตัว</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section section-reveal delay-3" id="map">
+          <div class="container">
+            <div class="section-header">
+              <div>
+                <span class="eyebrow">Map</span>
+                <h2>แผนที่สถานีใกล้คุณ</h2>
+                <p>ดูสถานีบนแผนที่จริงพร้อมวงรัศมีค้นหา สีสถานะ และรายละเอียดแต่ละปั๊มจากข้อมูล Firestore แบบสด</p>
+              </div>
+            </div>
+            <div class="panel radar-layout">
+              <div class="station-map-shell">
+                <div class="station-map" data-home-map aria-label="แผนที่สถานีใกล้คุณ"></div>
+                <div class="map-overlay-note" data-home-map-note></div>
+              </div>
+              <div>
+                <div class="legend-row">
+                  <span class="legend-item tone-ok"><span class="legend-dot"></span>พร้อมจ่าย</span>
+                  <span class="legend-item tone-warn"><span class="legend-dot"></span>เหลือน้อย</span>
+                  <span class="legend-item tone-alert"><span class="legend-dot"></span>ใกล้หมด</span>
+                  <span class="legend-item tone-empty"><span class="legend-dot"></span>หมด</span>
+                </div>
+                <div class="keyline"></div>
+                <div class="station-list" data-station-list></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-inner">
+          <span>Thairecheckpump Demo Frontend</span>
+          <span>สร้างจากโครงหน้าอ้างอิงและข้อมูลจำลองสำหรับเดโม | <span data-year></span></span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
