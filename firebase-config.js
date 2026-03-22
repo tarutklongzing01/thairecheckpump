@@ -12,8 +12,15 @@ export const appSettings = {
   sdkVersion: "12.7.0",
   defaultCenter: { lat: 13.736717, lng: 100.523186 },
   defaultRadiusKm: 6,
+  googleSheetRefreshMs: 30000,
   maxStationDocs: 1500,
   maxFeedDocs: 80,
+  dataSources: {
+    stations: {
+      type: "google-sheet",
+      url: "https://docs.google.com/spreadsheets/d/15_Rc3INQqZ-qoCWBKiHGB2znQzO5O8G1GltH2ZwU1uA/edit?gid=447543159#gid=447543159",
+    },
+  },
   collections: {
     stations: "stations",
     reports: "reports",

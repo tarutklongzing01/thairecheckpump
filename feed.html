@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Feed | Thairecheckpump</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260321-8" />
-    <script type="module" src="firebase-app.js?v=20260321-8"></script>
+    <link rel="stylesheet" href="styles.css?v=20260322-2" />
+    <script type="module" src="firebase-app.js?v=20260322-2"></script>
   </head>
   <body data-page="feed">
     <div class="site-shell">
@@ -47,7 +47,7 @@
       <main>
         <section class="page-hero">
           <div class="container feed-top-grid">
-            <div class="panel section-reveal">
+            <div class="panel section-reveal feed-hero-panel">
               <span class="eyebrow">Feed</span>
               <h1 class="subheadline">ไทม์ไลน์รายงานจากผู้ใช้และข้อมูลสถานี</h1>
               <p class="lede">ใช้ฟีดนี้เช็กจุดที่เริ่มเสี่ยงหมดน้ำมัน ดูสถานีที่ยังเติมได้ และเห็นความเคลื่อนไหวล่าสุดตามชนิดเชื้อเพลิงที่ต้องการ</p>
@@ -55,22 +55,34 @@
                 <a class="button button-primary" href="report.html">แจ้งสถานีใหม่</a>
                 <a class="button button-ghost" href="gallery.html">ดูคลังภาพ</a>
               </div>
+              <div class="feed-hero-note">
+                <span class="tiny-badge">เรียงล่าสุดก่อน</span>
+                <span class="muted">รวมรายงานผู้ใช้กับสัญญาณจากสถานีไว้ในหน้าเดียว</span>
+              </div>
             </div>
-            <div class="panel section-reveal delay-1">
-              <div class="stat-strip">
-                <div class="stat-card">
+            <div class="panel section-reveal delay-1 feed-summary-panel">
+              <div class="feed-summary-head">
+                <span class="eyebrow">Pulse</span>
+                <h2>ภาพรวมจังหวะฟีดตอนนี้</h2>
+                <p class="muted">ดูสถานะเสี่ยง ภาพยืนยัน และจำนวนผู้ร่วมรายงานในมุมเดียว</p>
+              </div>
+              <div class="stat-strip feed-stat-grid">
+                <div class="stat-card feed-stat-card">
                   <span>รายงานทั้งหมด</span>
                   <strong data-feed-total>0</strong>
+                  <small>รายการทั้งหมดที่ตรงกับฟิลเตอร์ฟีด</small>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card feed-stat-card">
                   <span>สถานีเสี่ยง</span>
                   <strong data-feed-urgent>0</strong>
+                  <small>จุดที่ขึ้นใกล้หมดหรือหมดแล้ว</small>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card feed-stat-card">
                   <span>มีภาพยืนยัน</span>
                   <strong data-feed-photo>0</strong>
+                  <small>การ์ดที่มีรูปช่วยยืนยันสถานะ</small>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card feed-stat-card feed-stat-card--accent">
                   <span>ผู้ร่วมรายงาน</span>
                   <strong data-feed-contributors>0</strong>
                   <small data-feed-average-age>-</small>

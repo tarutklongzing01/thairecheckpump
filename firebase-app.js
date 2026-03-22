@@ -30,6 +30,7 @@ import {
 import { getDownloadURL, getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
 
 const FALLBACK_STORAGE_KEY = "thairecheckpump-fallback-reports";
+const DEFAULT_GOOGLE_SHEET_REFRESH_MS = 30000;
 
 const FUELS = [
   { id: "diesel", label: "ดีเซล" },
@@ -65,15 +66,18 @@ const BRAND_COLORS = {
 BRANDS.push("อื่นๆ");
 BRAND_COLORS["อื่นๆ"] = "#94a3b8";
 
-const PUMPRADAR_BRAND_MAP = {
-  PTT: "เธเธ•เธ—.",
-  BANGCHAK: "เธเธฒเธเธเธฒเธ",
+const BRAND_LABEL_MAP = {
+  PTT: "ปตท.",
+  "ปตท.": "ปตท.",
+  BANGCHAK: "บางจาก",
+  บางจาก: "บางจาก",
   PT: "PT",
   SHELL: "Shell",
   ESSO: "Esso",
-  SUSCO: "เธเธฑเธชเนเธเน",
+  SUSCO: "ซัสโก้",
   CALTEX: "Caltex",
   OTHER: "อื่นๆ",
+  "อื่นๆ": "อื่นๆ",
 };
 
 const PUMPRADAR_STATUS_MAP = {
@@ -84,13 +88,96 @@ const PUMPRADAR_STATUS_MAP = {
 };
 
 const PUMPRADAR_FUEL_MAP = {
-  diesel: "diesel",
-  benzine91: "gas91",
-  benzine95: "gas95",
-  e20: "e20",
-  e85: "e85",
-  lpg: "lpg",
+  diesel: ["diesel"],
+  gas91: ["benzineG91", "benzine91"],
+  gas95: ["benzineG95", "benzine95"],
+  e20: ["benzineE20", "e20"],
+  e85: ["benzineE85", "e85"],
+  lpg: ["lpg"],
 };
+
+const PUMPRADAR_PROVINCES = [
+  { slug: "amnat-charoen", label: "อำนาจเจริญ" },
+  { slug: "ang-thong", label: "อ่างทอง" },
+  { slug: "bangkok", label: "กรุงเทพมหานคร" },
+  { slug: "bueng-kan", label: "บึงกาฬ" },
+  { slug: "buriram", label: "บุรีรัมย์" },
+  { slug: "chachoengsao", label: "ฉะเชิงเทรา" },
+  { slug: "chai-nat", label: "ชัยนาท" },
+  { slug: "chaiyaphum", label: "ชัยภูมิ" },
+  { slug: "chanthaburi", label: "จันทบุรี" },
+  { slug: "chiang-mai", label: "เชียงใหม่" },
+  { slug: "chiang-rai", label: "เชียงราย" },
+  { slug: "chonburi", label: "ชลบุรี" },
+  { slug: "chumphon", label: "ชุมพร" },
+  { slug: "kalasin", label: "กาฬสินธุ์" },
+  { slug: "kamphaeng-phet", label: "กำแพงเพชร" },
+  { slug: "kanchanaburi", label: "กาญจนบุรี" },
+  { slug: "khon-kaen", label: "ขอนแก่น" },
+  { slug: "krabi", label: "กระบี่" },
+  { slug: "lampang", label: "ลำปาง" },
+  { slug: "lamphun", label: "ลำพูน" },
+  { slug: "loei", label: "เลย" },
+  { slug: "lopburi", label: "ลพบุรี" },
+  { slug: "mae-hong-son", label: "แม่ฮ่องสอน" },
+  { slug: "maha-sarakham", label: "มหาสารคาม" },
+  { slug: "mukdahan", label: "มุกดาหาร" },
+  { slug: "nakhon-nayok", label: "นครนายก" },
+  { slug: "nakhon-pathom", label: "นครปฐม" },
+  { slug: "nakhon-phanom", label: "นครพนม" },
+  { slug: "nakhon-ratchasima", label: "นครราชสีมา" },
+  { slug: "nakhon-sawan", label: "นครสวรรค์" },
+  { slug: "nakhon-si-thammarat", label: "นครศรีธรรมราช" },
+  { slug: "nan", label: "น่าน" },
+  { slug: "narathiwat", label: "นราธิวาส" },
+  { slug: "nong-bua-lamphu", label: "หนองบัวลำภู" },
+  { slug: "nong-khai", label: "หนองคาย" },
+  { slug: "nonthaburi", label: "นนทบุรี" },
+  { slug: "pathum-thani", label: "ปทุมธานี" },
+  { slug: "pattani", label: "ปัตตานี" },
+  { slug: "phang-nga", label: "พังงา" },
+  { slug: "phatthalung", label: "พัทลุง" },
+  { slug: "phayao", label: "พะเยา" },
+  { slug: "phetchabun", label: "เพชรบูรณ์" },
+  { slug: "phetchaburi", label: "เพชรบุรี" },
+  { slug: "phichit", label: "พิจิตร" },
+  { slug: "phitsanulok", label: "พิษณุโลก" },
+  { slug: "phra-nakhon-si-ayutthaya", label: "พระนครศรีอยุธยา" },
+  { slug: "phrae", label: "แพร่" },
+  { slug: "phuket", label: "ภูเก็ต" },
+  { slug: "prachinburi", label: "ปราจีนบุรี" },
+  { slug: "prachuap-khiri-khan", label: "ประจวบคีรีขันธ์" },
+  { slug: "ranong", label: "ระนอง" },
+  { slug: "ratchaburi", label: "ราชบุรี" },
+  { slug: "rayong", label: "ระยอง" },
+  { slug: "roi-et", label: "ร้อยเอ็ด" },
+  { slug: "sa-kaeo", label: "สระแก้ว" },
+  { slug: "sakon-nakhon", label: "สกลนคร" },
+  { slug: "samut-prakan", label: "สมุทรปราการ" },
+  { slug: "samut-sakhon", label: "สมุทรสาคร" },
+  { slug: "samut-songkhram", label: "สมุทรสงคราม" },
+  { slug: "saraburi", label: "สระบุรี" },
+  { slug: "satun", label: "สตูล" },
+  { slug: "sing-buri", label: "สิงห์บุรี" },
+  { slug: "sisaket", label: "ศรีสะเกษ" },
+  { slug: "songkhla", label: "สงขลา" },
+  { slug: "sukhothai", label: "สุโขทัย" },
+  { slug: "suphan-buri", label: "สุพรรณบุรี" },
+  { slug: "surat-thani", label: "สุราษฎร์ธานี" },
+  { slug: "surin", label: "สุรินทร์" },
+  { slug: "tak", label: "ตาก" },
+  { slug: "trang", label: "ตรัง" },
+  { slug: "trat", label: "ตราด" },
+  { slug: "ubon-ratchathani", label: "อุบลราชธานี" },
+  { slug: "udon-thani", label: "อุดรธานี" },
+  { slug: "uthai-thani", label: "อุทัยธานี" },
+  { slug: "uttaradit", label: "อุตรดิตถ์" },
+  { slug: "yala", label: "ยะลา" },
+  { slug: "yasothon", label: "ยโสธร" },
+];
+
+const PUMPRADAR_PROVINCE_SLUGS = PUMPRADAR_PROVINCES.map((province) => province.slug);
+const DEFAULT_IMPORT_PROVINCE_SLUG = "chonburi";
 
 const DEMO_STATIONS = [
   {
@@ -225,6 +312,10 @@ const DEMO_REPORTS = [
 const store = {
   page: "",
   mode: "loading",
+  stationSource: {
+    type: "demo",
+    url: "",
+  },
   app: null,
   analytics: null,
   auth: null,
@@ -239,6 +330,22 @@ const store = {
   pageController: null,
   authReady: false,
   liveHint: "",
+  sheetRefreshTimerId: 0,
+  sheetRefreshInFlight: false,
+  firebaseStatus: {
+    configReady: hasFirebaseConfig(),
+    appReady: false,
+    dbReady: false,
+    storageReady: false,
+    listeners: {
+      stations: { status: "idle", count: 0 },
+      reports: { status: "idle", count: 0 },
+    },
+    lastError: "",
+    lastErrorCode: "",
+    lastErrorSource: "",
+    lastErrorAtMs: 0,
+  },
 };
 
 document.addEventListener("DOMContentLoaded", bootstrap);
@@ -258,10 +365,15 @@ async function bootstrap() {
 
   if (hasFirebaseConfig()) {
     await connectFirebase();
+  } else if (canLoadStationsFromGoogleSheet()) {
+    await connectGoogleSheetOnly();
+  } else if (wantsGoogleSheetStations()) {
+    useFallbackMode("ตั้งค่า Google Sheet endpoint สำหรับ stations ยังไม่ครบ จึงใช้ข้อมูลเดโมแทน");
   } else {
     useFallbackMode("ยังไม่ได้ตั้งค่า Firebase config จึงใช้ข้อมูลเดโมและ fallback reports ในเบราว์เซอร์นี้");
   }
 
+  ensureGoogleSheetAutoRefresh();
   refreshCurrentPage();
 }
 
@@ -272,8 +384,12 @@ async function connectFirebase() {
     store.auth = getAuth(store.app);
     store.db = getFirestore(store.app);
     store.storage = getStorage(store.app);
+    setStationSource("firestore");
+    syncFirebaseComponentState();
     store.mode = "firebase";
-    store.liveHint = "กำลังเชื่อม Firestore และรอ listener จาก Firebase";
+    store.liveHint = canLoadStationsFromGoogleSheet()
+      ? "กำลังเชื่อม Firebase และโหลดสถานีจาก Google Sheet"
+      : "กำลังเชื่อม Firestore และรอ listener จาก Firebase";
     renderGlobalChrome();
 
     onAuthStateChanged(store.auth, async (user) => {
@@ -287,12 +403,48 @@ async function connectFirebase() {
       refreshCurrentPage();
     });
 
-    subscribeRealtime();
-    store.liveHint = "";
+    let loadedStationsFromSheet = false;
+    if (canLoadStationsFromGoogleSheet()) {
+      loadedStationsFromSheet = await loadStationsFromGoogleSheet();
+    }
+
+    subscribeRealtime({
+      includeStations: !loadedStationsFromSheet,
+      includeReports: true,
+    });
+
+    if (loadedStationsFromSheet) {
+      store.liveHint = "";
+    } else if (wantsGoogleSheetStations()) {
+      store.liveHint = "Google Sheet endpoint ใช้งานไม่ได้ จึงกลับมาอ่านสถานีจาก Firestore";
+    } else {
+      store.liveHint = "";
+    }
     renderGlobalChrome();
   } catch (error) {
     console.error(error);
+    noteFirebaseError("connect", error);
     useFallbackMode(`เชื่อม Firebase ไม่สำเร็จ: ${humanizeError(error)}`);
+  }
+}
+
+async function connectGoogleSheetOnly() {
+  try {
+    store.mode = "sheet";
+    store.reports = [];
+    store.liveHint = "กำลังโหลดข้อมูลสถานีจาก Google Sheet";
+    renderGlobalChrome();
+
+    const loaded = await loadStationsFromGoogleSheet();
+    if (!loaded) {
+      throw new Error("Google Sheet endpoint ไม่พร้อมใช้งาน");
+    }
+
+    store.liveHint = "หน้าเว็บกำลังใช้ข้อมูลสถานีจาก Google Sheet";
+    renderGlobalChrome();
+  } catch (error) {
+    console.error(error);
+    useFallbackMode(`โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ: ${humanizeError(error)}`);
   }
 }
 
@@ -311,42 +463,58 @@ async function initializeAnalyticsIfSupported() {
   }
 }
 
-function subscribeRealtime() {
+function subscribeRealtime(options = {}) {
+  const { includeStations = true, includeReports = true } = options;
   cleanupRealtime();
 
-  const stationQuery = query(
-    collection(store.db, appSettings.collections.stations),
-    orderBy("updatedAt", "desc"),
-    limit(appSettings.maxStationDocs)
-  );
+  if (includeStations) {
+    setFirebaseListenerState("stations", "connecting", 0);
 
-  const reportQuery = query(
-    collection(store.db, appSettings.collections.reports),
-    orderBy("createdAt", "desc"),
-    limit(appSettings.maxFeedDocs)
-  );
+    const stationQuery = query(
+      collection(store.db, appSettings.collections.stations),
+      orderBy("updatedAt", "desc"),
+      limit(appSettings.maxStationDocs)
+    );
 
-  store.unsubs.push(
-    onSnapshot(
-      stationQuery,
-      (snapshot) => {
-        store.stations = snapshot.docs.map(mapStationDoc);
-        refreshCurrentPage();
-      },
-      (error) => handleRealtimeError("stations", error)
-    )
-  );
+    store.unsubs.push(
+      onSnapshot(
+        stationQuery,
+        (snapshot) => {
+          setStationSource("firestore");
+          setFirebaseListenerState("stations", "ok", snapshot.size);
+          store.stations = snapshot.docs.map(mapStationDoc);
+          refreshCurrentPage();
+        },
+        (error) => handleRealtimeError("stations", error)
+      )
+    );
+  } else {
+    setFirebaseListenerState("stations", store.stationSource.type === "google-sheet" ? "sheet" : "idle", store.stations.length);
+  }
 
-  store.unsubs.push(
-    onSnapshot(
-      reportQuery,
-      (snapshot) => {
-        store.reports = snapshot.docs.map(mapReportDoc);
-        refreshCurrentPage();
-      },
-      (error) => handleRealtimeError("reports", error)
-    )
-  );
+  if (includeReports) {
+    setFirebaseListenerState("reports", "connecting", 0);
+
+    const reportQuery = query(
+      collection(store.db, appSettings.collections.reports),
+      orderBy("createdAt", "desc"),
+      limit(appSettings.maxFeedDocs)
+    );
+
+    store.unsubs.push(
+      onSnapshot(
+        reportQuery,
+        (snapshot) => {
+          setFirebaseListenerState("reports", "ok", snapshot.size);
+          store.reports = snapshot.docs.map(mapReportDoc);
+          refreshCurrentPage();
+        },
+        (error) => handleRealtimeError("reports", error)
+      )
+    );
+  } else {
+    setFirebaseListenerState("reports", "idle", store.reports.length);
+  }
 }
 
 function cleanupRealtime() {
@@ -356,13 +524,16 @@ function cleanupRealtime() {
 
 function handleRealtimeError(source, error) {
   console.error(source, error);
+  noteFirebaseError(source, error);
   useFallbackMode(`อ่านข้อมูลสดจาก ${source} ไม่ได้: ${humanizeError(error)}`);
 }
 
 function useFallbackMode(message) {
   cleanupRealtime();
   store.mode = "demo";
+  setStationSource("demo");
   store.liveHint = message;
+  syncFirebaseComponentState();
   const localReports = loadFallbackReports();
   store.reports = [...DEMO_REPORTS, ...localReports].sort((left, right) => getReportAge(left) - getReportAge(right));
   store.stations = DEMO_STATIONS.map((station) => ({
@@ -553,6 +724,7 @@ async function handleGoogleSignIn(trigger) {
     renderGlobalChrome();
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("auth", error);
     setMessage(messageNode, humanizeError(error));
     store.liveHint = humanizeError(error);
     renderGlobalChrome();
@@ -576,6 +748,7 @@ async function handleGoogleSignOut(trigger) {
     renderGlobalChrome();
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("auth", error);
     setMessage(messageNode, humanizeError(error));
     store.liveHint = humanizeError(error);
     renderGlobalChrome();
@@ -628,9 +801,13 @@ function createHomeController() {
     },
     render() {
       const runtime = getRuntimeData(state.radius);
-      const visibleStations = runtime.stations
-        .filter((station) => state.brands.has(station.brand) && station.distanceKm <= state.radius)
-        .sort((left, right) => left.distanceKm - right.distanceKm);
+      const filteredStations = runtime.stations.filter((station) => state.brands.has(station.brand) && station.distanceKm <= state.radius);
+      const visibleStations = [...filteredStations].sort((left, right) => {
+        if (left.updatedMinutes !== right.updatedMinutes) {
+          return left.updatedMinutes - right.updatedMinutes;
+        }
+        return left.distanceKm - right.distanceKm;
+      });
 
       const knownStations = visibleStations.filter((station) => statusScore(station.fuels[state.fuel]) >= 0);
       const readyStations = knownStations.filter((station) => statusScore(station.fuels[state.fuel]) >= 0.66);
@@ -853,11 +1030,13 @@ function createFeedController() {
     },
     render() {
       const runtime = getRuntimeData();
-      const reports = runtime.reports.filter((report) => {
+      const feedItems = buildFeedItems(runtime.reports, runtime.stations);
+      const reports = feedItems.filter((report) => {
         const fuelPass = state.fuel === "all" || report.fuel === state.fuel;
         const statusPass = state.status === "all" || report.status === state.status;
         return fuelPass && statusPass;
       });
+      const visibleReports = reports.slice(0, appSettings.maxFeedDocs);
 
       setText("[data-feed-total]", `${reports.length}`);
       setText("[data-feed-urgent]", `${reports.filter((report) => ["low", "empty"].includes(report.status)).length}`);
@@ -867,7 +1046,7 @@ function createFeedController() {
       const averageAge = reports.length ? Math.round(reports.reduce((total, report) => total + getReportAge(report), 0) / reports.length) : 0;
       setText("[data-feed-average-age]", averageAge ? `${averageAge} นาที` : "-");
 
-      renderHTML("[data-feed-list]", reports.length ? reports.map((report) => renderFeedCard(report)).join("") : renderEmptyState("ยังไม่มีรายงานที่ตรงกับตัวกรองนี้"));
+      renderHTML("[data-feed-list]", reports.length ? visibleReports.map((report) => renderFeedCard(report)).join("") : renderEmptyState("ยังไม่มีรายงานที่ตรงกับตัวกรองนี้"));
     },
   };
 }
@@ -1024,6 +1203,7 @@ function createAdminController() {
   return {
     init() {
       renderAdminFuelFields(document.querySelector("[data-admin-fuel-grid]"));
+      renderAdminImportProvinceOptions(document.querySelector("[data-admin-import-province]"));
 
       const searchInput = document.querySelector("[data-admin-search]");
       const form = document.querySelector("[data-admin-form]");
@@ -1094,12 +1274,12 @@ function createAdminController() {
       });
 
       importButton?.addEventListener("click", async () => {
-        await importPumpRadarStations();
+        await importPumpRadarStationsV3();
         this.render();
       });
 
       importDownloadButton?.addEventListener("click", () => {
-        downloadPumpRadarProvinceJson();
+        downloadPumpRadarProvinceJsonV3();
       });
 
       importResetButton?.addEventListener("click", () => {
@@ -1122,9 +1302,13 @@ function createAdminController() {
       const selectedReport = syncAdminReportSelection(state, reports, filteredReports);
 
       setText("[data-admin-count]", `${stations.length}`);
-      setText("[data-admin-mode]", store.mode === "firebase" ? "Firestore" : "Demo");
+      setText(
+        "[data-admin-mode]",
+        store.mode === "firebase" ? (store.stationSource.type === "google-sheet" ? "Sheet + Firebase" : "Firestore") : store.mode === "sheet" ? "Google Sheet" : "Demo"
+      );
       setText("[data-admin-auth]", isGoogleUser() ? "Google" : store.authReady ? "ยังไม่ล็อกอิน" : "รอตรวจสอบ");
       setText("[data-admin-write]", hasAdminAccess() ? "เขียนได้" : "ปิดอยู่");
+      renderAdminFirebaseStatus();
 
       renderHTML(
         "[data-admin-list]",
@@ -1192,7 +1376,9 @@ function createAdminController() {
       setText("[data-admin-form-title]", state.isCreating ? "สร้างสถานีใหม่" : selectedStation ? selectedStation.name : "เลือกสถานีเพื่อแก้ไข");
       setText(
         "[data-admin-form-hint]",
-        state.isCreating
+        store.stationSource.type === "google-sheet"
+          ? "หน้า public กำลังอ่านข้อมูลสถานีจาก Google Sheet อยู่ ถ้าจะแก้สถานีให้แก้ใน Sheet แล้ว publish endpoint ใหม่"
+          : state.isCreating
           ? "กรอกข้อมูลสถานีใหม่และสถานะน้ำมันแต่ละชนิด จากนั้นบันทึกขึ้น Firestore"
           : selectedStation
             ? `Document ID: ${selectedStation.id} | อัปเดตล่าสุด ${formatShortAge(selectedStation.updatedMinutes)}`
@@ -1364,14 +1550,14 @@ function setAdminFieldValue(selector, value) {
 }
 
 function syncAdminFormState(state, hasSelection) {
-  const canWrite = hasAdminAccess();
+  const canWrite = canManageStationsInFirestore();
   const stationIdInput = document.querySelector("[data-admin-station-id]");
   const saveButton = document.querySelector("[data-admin-save]");
   const deleteButton = document.querySelector("[data-admin-delete]");
   const form = document.querySelector("[data-admin-form]");
 
   if (stationIdInput) {
-    stationIdInput.disabled = !state.isCreating;
+    stationIdInput.disabled = !state.isCreating || !canWrite;
   }
   if (saveButton) {
     saveButton.disabled = !canWrite;
@@ -1389,6 +1575,9 @@ async function saveAdminStation(form, state) {
   setMessage(messageBox, "กำลังบันทึกสถานี...");
 
   try {
+    if (store.stationSource.type === "google-sheet") {
+      throw new Error("หน้าเว็บตั้งให้ใช้ Google Sheet เป็นแหล่งข้อมูลสถานีอยู่ ให้แก้ข้อมูลสถานีใน Sheet แล้ว publish endpoint ใหม่");
+    }
     if (store.mode !== "firebase" || !store.db) {
       throw new Error("โหมดนี้ยังไม่เชื่อม Firestore จึงแก้ไขสถานีไม่ได้");
     }
@@ -1441,6 +1630,7 @@ async function saveAdminStation(form, state) {
     setMessage(messageBox, `บันทึกสถานี ${payload.name} แล้ว`);
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("admin-station-save", error);
     setMessage(messageBox, humanizeError(error));
   }
 }
@@ -1452,6 +1642,9 @@ async function deleteAdminStation(state) {
     if (!state.selectedId || state.isCreating) {
       setMessage(messageBox, "เลือกสถานีก่อนลบ");
       return;
+    }
+    if (store.stationSource.type === "google-sheet") {
+      throw new Error("หน้าเว็บตั้งให้ใช้ Google Sheet เป็นแหล่งข้อมูลสถานีอยู่ ให้ลบหรือแก้ไขสถานีใน Sheet แทน");
     }
     if (store.mode !== "firebase" || !store.db) {
       throw new Error("โหมดนี้ยังไม่เชื่อม Firestore จึงลบสถานีไม่ได้");
@@ -1478,6 +1671,7 @@ async function deleteAdminStation(state) {
     setMessage(messageBox, `ลบสถานีและรายงานที่เกี่ยวข้อง ${reportSnapshot.size} รายการแล้ว`);
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("admin-station-delete", error);
     setMessage(messageBox, humanizeError(error));
   }
 }
@@ -1718,6 +1912,7 @@ async function saveAdminReport(form, state) {
     setMessage(messageBox, `บันทึกรายงาน ${payload.id} แล้ว`);
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("admin-report-save", error);
     setMessage(messageBox, humanizeError(error));
   }
 }
@@ -1754,6 +1949,7 @@ async function deleteAdminReport(state) {
     setMessage(messageBox, "ลบรายงานแล้ว");
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("admin-report-delete", error);
     setMessage(messageBox, humanizeError(error));
   }
 }
@@ -1898,8 +2094,22 @@ function clearAdminImportMessage() {
   setMessage(document.querySelector("[data-admin-import-message]"), "");
 }
 
+function renderAdminImportProvinceOptions(select) {
+  if (!select) {
+    return;
+  }
+
+  const currentValue = normalizeProvinceSlug(select.value) || DEFAULT_IMPORT_PROVINCE_SLUG;
+  const options = PUMPRADAR_PROVINCES.map(
+    (province) => `<option value="${escapeHtml(province.slug)}">${escapeHtml(`${province.label} (${province.slug})`)}</option>`
+  ).join("");
+
+  select.innerHTML = options;
+  select.value = PUMPRADAR_PROVINCE_SLUGS.includes(currentValue) ? currentValue : DEFAULT_IMPORT_PROVINCE_SLUG;
+}
+
 function syncAdminImportState() {
-  const canWrite = hasAdminAccess();
+  const canWrite = canManageStationsInFirestore();
   const submitButton = document.querySelector("[data-admin-import-submit]");
   if (submitButton) {
     submitButton.disabled = !canWrite;
@@ -1918,15 +2128,107 @@ function resetAdminImportForm() {
 }
 
 function readAdminImportProvinceSlug() {
+  const slugs = readAdminImportProvinceSlugs({ required: true });
+  if (slugs.length !== 1 || slugs[0] === "all" || slugs[0] === "*") {
+    throw new Error("เลือกจังหวัดเดียวก่อนดาวน์โหลด JSON");
+  }
+  return slugs[0];
+}
+
+function normalizeProvinceSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+}
+
+function readAdminImportProvinceSlugs(options = {}) {
+  const { required = false } = options;
   const input = document.querySelector("[data-admin-import-province]");
-  const slug = String(input?.value || "").trim().toLowerCase().replace(/\s+/g, "-");
-  if (!slug) {
-    throw new Error("กรอก province slug ก่อนดาวน์โหลด JSON");
+  const isSelect = input?.tagName === "SELECT";
+  const slugs = isSelect
+    ? [normalizeProvinceSlug(input?.value || "")].filter(Boolean)
+    : String(input?.value || "")
+        .trim()
+        .toLowerCase()
+        .split(",")
+        .map(normalizeProvinceSlug)
+        .filter(Boolean);
+
+  if (required && !slugs.length) {
+    throw new Error("เลือกจังหวัดก่อนดาวน์โหลดหรือ import JSON");
   }
-  if (input) {
-    input.value = slug;
+
+  if (input && slugs.length && !isSelect) {
+    input.value = slugs.join(", ");
   }
-  return slug;
+
+  return slugs;
+}
+
+function isAllProvinceSelection(slugs) {
+  return slugs.includes("all") || slugs.includes("*");
+}
+
+function filterProvincePayloadsForImport(provincePayloads, requestedSlugs) {
+  if (!provincePayloads.length) {
+    return { payloads: [], matchedSlugs: [] };
+  }
+
+  if (!requestedSlugs.length) {
+    if (provincePayloads.length > 1) {
+      throw new Error("ไฟล์นี้มีหลายจังหวัด กรุณาระบุ Province Slug ก่อน import เพื่อป้องกันการนำเข้าทั้งก้อน");
+    }
+
+    const onlyPayload = provincePayloads[0];
+    return {
+      payloads: [onlyPayload],
+      matchedSlugs: [normalizeProvinceSlug(onlyPayload.provinceSlug || onlyPayload.province)],
+    };
+  }
+
+  if (isAllProvinceSelection(requestedSlugs)) {
+    return {
+      payloads: provincePayloads,
+      matchedSlugs: provincePayloads.map((payload) => normalizeProvinceSlug(payload.provinceSlug || payload.province)).filter(Boolean),
+    };
+  }
+
+  const payloadMap = new Map(
+    provincePayloads.map((payload) => [normalizeProvinceSlug(payload.provinceSlug || payload.province), payload])
+  );
+  const matchedPayloads = [];
+  const missingSlugs = [];
+
+  requestedSlugs.forEach((slug) => {
+    const payload = payloadMap.get(slug);
+    if (payload) {
+      matchedPayloads.push(payload);
+    } else {
+      missingSlugs.push(slug);
+    }
+  });
+
+  if (missingSlugs.length) {
+    throw new Error(`ไม่พบจังหวัด ${missingSlugs.join(", ")} ใน JSON ชุดนี้`);
+  }
+
+  return {
+    payloads: matchedPayloads,
+    matchedSlugs: requestedSlugs,
+  };
+}
+
+function describeProvinceImportSelection(selection) {
+  if (!selection.matchedSlugs.length) {
+    return "selected provinces";
+  }
+
+  if (selection.matchedSlugs.length === 1) {
+    return selection.matchedSlugs[0];
+  }
+
+  return selection.matchedSlugs.join(", ");
 }
 
 function buildPumpRadarProvinceUrl(slug) {
@@ -1951,7 +2253,7 @@ function downloadPumpRadarProvinceJson() {
   }
 }
 
-async function importPumpRadarStations() {
+async function importPumpRadarStationsV2() {
   const messageBox = document.querySelector("[data-admin-import-message]");
   setMessage(messageBox, "กำลังตรวจข้อมูล PumpRadar...");
 
@@ -1964,10 +2266,19 @@ async function importPumpRadarStations() {
     }
 
     const raw = await readAdminImportText();
-    const payload = parsePumpRadarPayload(raw);
-    const stationEntries = payload.stations
-      .map((station) => buildPumpRadarStationEntry(station, payload.province))
-      .filter(Boolean);
+    const provincePayloads = parsePumpRadarPayloadV2(raw);
+    const stationMap = new Map();
+
+    provincePayloads.forEach((payload) => {
+      payload.stations
+        .map((station) => buildPumpRadarStationEntry(station, payload.province))
+        .filter(Boolean)
+        .forEach((entry) => {
+          stationMap.set(entry.id, entry);
+        });
+    });
+
+    const stationEntries = [...stationMap.values()];
 
     if (!stationEntries.length) {
       throw new Error("JSON นี้ไม่มีสถานีที่พร้อมนำเข้า");
@@ -1978,6 +2289,7 @@ async function importPumpRadarStations() {
     setMessage(messageBox, `นำเข้าข้อมูล PumpRadar แล้ว ${stationEntries.length} สถานี (${payload.province || "ไม่ระบุจังหวัด"})`);
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("admin-import", error);
     setMessage(messageBox, humanizeError(error));
   }
 }
@@ -1998,7 +2310,7 @@ async function readAdminImportText() {
   throw new Error("เลือกไฟล์ JSON หรือวาง JSON จาก PumpRadar ก่อน");
 }
 
-function parsePumpRadarPayload(raw) {
+function parsePumpRadarPayloadV2(raw) {
   let payload;
   try {
     payload = JSON.parse(raw);
@@ -2050,8 +2362,7 @@ function buildPumpRadarStationEntry(station, provinceName) {
 }
 
 function mapPumpRadarBrand(brandId) {
-  const key = String(brandId || "OTHER").trim().toUpperCase();
-  return PUMPRADAR_BRAND_MAP[key] || String(brandId || "อื่นๆ").trim() || "อื่นๆ";
+  return normalizeBrandLabel(brandId);
 }
 
 function mapPumpRadarStatus(status) {
@@ -2065,8 +2376,9 @@ function buildPumpRadarFuelStates(report) {
     return fuelStates;
   }
 
-  Object.entries(PUMPRADAR_FUEL_MAP).forEach(([remoteFuelId, localFuelId]) => {
-    fuelStates[localFuelId] = mapPumpRadarStatus(report[remoteFuelId]);
+  Object.entries(PUMPRADAR_FUEL_MAP).forEach(([localFuelId, remoteFuelIds]) => {
+    const matchedValue = remoteFuelIds.map((remoteFuelId) => report[remoteFuelId]).find((value) => value !== undefined);
+    fuelStates[localFuelId] = mapPumpRadarStatus(matchedValue);
   });
 
   return fuelStates;
@@ -2138,6 +2450,7 @@ async function submitReport(form) {
     refreshCurrentPage();
   } catch (error) {
     console.error(error);
+    maybeTrackFirebaseError("report-submit", error);
     setMessage(messageBox, humanizeError(error));
   }
 }
@@ -2245,6 +2558,97 @@ function getRuntimeData(radiusKm = appSettings.defaultRadiusKm) {
   return { reports, stations };
 }
 
+function buildFeedItems(reports, stations) {
+  const items = [...reports];
+  const latestReportByStation = new Map();
+
+  reports.forEach((report) => {
+    const stationKey = normalizeStationName(report.stationId || report.station || report.id);
+    if (!stationKey) {
+      return;
+    }
+
+    const current = latestReportByStation.get(stationKey);
+    const currentMs = Number(current?.updatedAtMs || current?.createdAtMs || 0);
+    const reportMs = Number(report.updatedAtMs || report.createdAtMs || 0);
+    if (!current || reportMs >= currentMs) {
+      latestReportByStation.set(stationKey, report);
+    }
+  });
+
+  stations.forEach((station) => {
+    const stationKey = normalizeStationName(station.id || station.name);
+    if (!stationKey) {
+      return;
+    }
+
+    const snapshotFeed = buildStationFeedItem(station);
+    if (!snapshotFeed) {
+      return;
+    }
+
+    const latestReport = latestReportByStation.get(stationKey);
+    const latestReportMs = Number(latestReport?.updatedAtMs || latestReport?.createdAtMs || 0);
+    const snapshotMs = Number(snapshotFeed.updatedAtMs || snapshotFeed.createdAtMs || 0);
+    if (latestReport && latestReportMs >= snapshotMs) {
+      return;
+    }
+
+    items.push(snapshotFeed);
+  });
+
+  return items.sort((left, right) => getReportAge(left) - getReportAge(right));
+}
+
+function buildStationFeedItem(station) {
+  const normalizedFuelStates = normalizeFuelStates(station.fuelStates || station.fuels);
+  const signal = pickStationFeedSignal(normalizedFuelStates);
+  if (!signal) {
+    return null;
+  }
+
+  const updatedAtMs = Number.isFinite(station.updatedAtMs)
+    ? station.updatedAtMs
+    : Date.now() - (Number(station.updatedMinutes || 0) * 60000);
+  const knownFuelCount = Object.values(normalizedFuelStates).filter((status) => status !== "unknown").length;
+  const readyFuelCount = Object.values(normalizedFuelStates).filter((status) => statusScore(status) >= 0.66).length;
+
+  return {
+    id: `station-snapshot-${station.id}`,
+    stationId: station.id,
+    station: station.name || station.id,
+    brand: station.brand || "Unknown",
+    area: station.area || "Unknown area",
+    lat: station.lat,
+    lng: station.lng,
+    fuel: signal.fuel,
+    status: signal.status,
+    note: `อัปเดตจาก Google Sheet | พร้อมจ่าย ${readyFuelCount}/${FUELS.length} | มีข้อมูล ${knownFuelCount}/${FUELS.length}`,
+    reporter: station.lastReporter || "Google Sheet",
+    createdBy: "",
+    createdAtMs: updatedAtMs,
+    updatedAtMs,
+    photoUrl: station.photoUrl || "",
+    photoPath: "",
+    distance: 0,
+    source: "google-sheet",
+  };
+}
+
+function pickStationFeedSignal(fuelStates) {
+  const normalized = normalizeFuelStates(fuelStates);
+  const priority = ["empty", "low", "medium", "high"];
+
+  for (const status of priority) {
+    const selectedFuel = FUELS.find((fuel) => normalized[fuel.id] === status);
+    if (selectedFuel) {
+      return { fuel: selectedFuel.id, status };
+    }
+  }
+
+  return null;
+}
+
 function readReportPayload(formData) {
   const latInput = parseOptionalNumber(formData.get("latitude"));
   const lngInput = parseOptionalNumber(formData.get("longitude"));
@@ -2311,14 +2715,17 @@ function mapStationDoc(snapshot) {
   return {
     id: snapshot.id,
     name: data.name || snapshot.id,
-    brand: data.brand || "ไม่ทราบแบรนด์",
+    brand: normalizeBrandLabel(data.brand),
     area: data.area || "ยังไม่ระบุพื้นที่",
     lat: coerceNumber(data.lat),
     lng: coerceNumber(data.lng),
     reportCount: Number(data.reportCount || 0),
     updatedMinutes: minutesSince(data.updatedAt),
+    updatedAtMs: timestampToMs(data.updatedAt),
     fuelStates: normalizeFuelStates(data.fuelStates),
     photoUrl: data.photoUrl || "",
+    importSource: data.importSource || "",
+    lastReporter: data.lastReporter || "",
   };
 }
 
@@ -2328,7 +2735,7 @@ function mapReportDoc(snapshot) {
     id: snapshot.id,
     stationId: data.stationId || normalizeStationName(`${data.brand || ""}-${data.station || snapshot.id}`),
     station: data.station || "ไม่ทราบสถานี",
-    brand: data.brand || "ไม่ทราบแบรนด์",
+    brand: normalizeBrandLabel(data.brand),
     area: data.area || "ยังไม่ระบุพื้นที่",
     lat: coerceNumber(data.lat),
     lng: coerceNumber(data.lng),
@@ -2481,9 +2888,14 @@ function mergeStationsWithReports(baseStations, reports) {
 }
 
 function renderGlobalChrome() {
+  const hidePublicStatus = store.page !== "admin";
   const modeLabel =
     store.mode === "firebase"
-      ? "Firebase Live"
+      ? store.stationSource.type === "google-sheet"
+        ? "Firebase + Sheet"
+        : "Firebase Live"
+      : store.mode === "sheet"
+        ? "Google Sheet"
       : store.mode === "demo"
         ? "Fallback Demo"
         : "กำลังเริ่มระบบ";
@@ -2500,15 +2912,19 @@ function renderGlobalChrome() {
     : "Location: ยังไม่มีพิกัด";
 
   document.querySelectorAll("[data-live-mode]").forEach((node) => {
+    node.hidden = hidePublicStatus;
     node.textContent = modeLabel;
   });
   document.querySelectorAll("[data-auth-state]").forEach((node) => {
+    node.hidden = hidePublicStatus;
     node.textContent = authLabel;
   });
   document.querySelectorAll("[data-location-state]").forEach((node) => {
+    node.hidden = hidePublicStatus;
     node.textContent = locationLabel;
   });
   document.querySelectorAll("[data-live-hint]").forEach((node) => {
+    node.hidden = hidePublicStatus;
     node.textContent = store.liveHint || "ระบบพร้อมใช้งาน";
   });
   document.querySelectorAll("[data-location-detail]").forEach((node) => {
@@ -2617,6 +3033,23 @@ function renderAvailabilityPill(label, status) {
   `;
 }
 
+function formatFeedSourceLabel(value) {
+  const source = String(value || "").trim().toLowerCase();
+  if (!source) {
+    return store.mode;
+  }
+  if (source === "google-sheet" || source === "sheet" || source === "google_sheets") {
+    return "Google Sheet";
+  }
+  if (source === "firebase") {
+    return "firebase";
+  }
+  if (source === "fallback") {
+    return "local";
+  }
+  return value;
+}
+
 function renderFeedCard(report) {
   const meta = STATUS_META[report.status || "unknown"];
   return `
@@ -2627,7 +3060,7 @@ function renderFeedCard(report) {
             <span class="brand-badge">${escapeHtml(report.brand)}</span>
             <span class="status-badge ${meta.tone}">${escapeHtml(meta.label)}</span>
             ${report.photoUrl ? '<span class="tiny-badge">มีภาพยืนยัน</span>' : ""}
-            <span class="tiny-badge">${escapeHtml(report.source || store.mode)}</span>
+            <span class="tiny-badge">${escapeHtml(formatFeedSourceLabel(report.source || store.mode))}</span>
           </div>
           <h3>${escapeHtml(report.station)}</h3>
         </div>
@@ -2746,6 +3179,16 @@ function normalizeFuelStates(value) {
   return map;
 }
 
+function normalizeBrandLabel(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "อื่นๆ";
+  }
+
+  const mapped = BRAND_LABEL_MAP[text.toUpperCase()] || BRAND_LABEL_MAP[text];
+  return mapped || text;
+}
+
 function cloneStation(station) {
   return {
     ...station,
@@ -2792,6 +3235,466 @@ function setMessage(node, value) {
   }
 }
 
+function normalizeStationsSourceType(value) {
+  const text = String(value || "firestore").trim().toLowerCase();
+  return ["google-sheet", "google_sheets", "google-sheets", "sheet", "sheets"].includes(text) ? "google-sheet" : "firestore";
+}
+
+function getStationsSourceConfig() {
+  const source = appSettings.dataSources?.stations || {};
+  return {
+    type: normalizeStationsSourceType(source.type),
+    url: String(source.url || "").trim(),
+  };
+}
+
+function wantsGoogleSheetStations() {
+  return getStationsSourceConfig().type === "google-sheet";
+}
+
+function canLoadStationsFromGoogleSheet() {
+  const source = getStationsSourceConfig();
+  return source.type === "google-sheet" && Boolean(source.url);
+}
+
+function setStationSource(type, url = "") {
+  store.stationSource = {
+    type,
+    url,
+  };
+}
+
+function getStationSourceLabel() {
+  if (store.stationSource.type === "google-sheet") {
+    return "Google Sheet";
+  }
+  if (store.stationSource.type === "firestore") {
+    return "Firestore";
+  }
+  return "Demo";
+}
+
+function canManageStationsInFirestore() {
+  return hasAdminAccess() && store.mode === "firebase" && store.stationSource.type !== "google-sheet";
+}
+
+function syncFirebaseComponentState() {
+  store.firebaseStatus.configReady = hasFirebaseConfig();
+  store.firebaseStatus.appReady = Boolean(store.app);
+  store.firebaseStatus.dbReady = Boolean(store.db);
+  store.firebaseStatus.storageReady = Boolean(store.storage);
+}
+
+async function loadStationsFromGoogleSheet(options = {}) {
+  const { background = false } = options;
+  const source = getStationsSourceConfig();
+  if (source.type !== "google-sheet") {
+    return false;
+  }
+  if (!source.url) {
+    throw new Error("ยังไม่ได้ใส่ Google Sheet endpoint URL สำหรับ stations");
+  }
+
+  try {
+    const resolvedUrl = resolveGoogleSheetFetchUrl(source.url);
+    const response = await fetch(resolvedUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/csv, text/plain;q=0.9, */*;q=0.8",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google Sheet endpoint ตอบกลับ ${response.status}`);
+    }
+
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    const rawText = await response.text();
+    const rows = parseSheetStationSource(rawText, contentType);
+    const parsedStations = rows.map(mapSheetStationRow).filter(Boolean);
+    const stations = markChangedGoogleSheetStations(parsedStations, store.stationSource.type === "google-sheet" ? store.stations : []);
+    if (!stations.length) {
+      throw new Error("Google Sheet endpoint ไม่มีสถานีที่พร้อมใช้งาน");
+    }
+
+    setStationSource("google-sheet", source.url);
+    store.stations = stations;
+    setFirebaseListenerState("stations", "sheet", stations.length);
+    refreshCurrentPage();
+    return true;
+  } catch (error) {
+    console.error(error);
+    if (store.mode === "firebase" && !background) {
+      store.liveHint = `โหลดสถานีจาก Google Sheet ไม่สำเร็จ: ${humanizeError(error)}`;
+      renderGlobalChrome();
+      return false;
+    }
+    if (store.mode === "firebase") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function getGoogleSheetRefreshMs() {
+  const configuredMs = Number(appSettings.googleSheetRefreshMs || 0);
+  if (Number.isFinite(configuredMs) && configuredMs >= 10000) {
+    return Math.round(configuredMs);
+  }
+  return DEFAULT_GOOGLE_SHEET_REFRESH_MS;
+}
+
+function ensureGoogleSheetAutoRefresh() {
+  if (store.sheetRefreshTimerId) {
+    window.clearInterval(store.sheetRefreshTimerId);
+    store.sheetRefreshTimerId = 0;
+  }
+
+  if (!canLoadStationsFromGoogleSheet()) {
+    return;
+  }
+
+  const triggerRefresh = () => {
+    refreshGoogleSheetInBackground();
+  };
+
+  store.sheetRefreshTimerId = window.setInterval(triggerRefresh, getGoogleSheetRefreshMs());
+  window.addEventListener("focus", triggerRefresh);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      triggerRefresh();
+    }
+  });
+}
+
+async function refreshGoogleSheetInBackground() {
+  if (store.sheetRefreshInFlight || document.hidden || !canLoadStationsFromGoogleSheet()) {
+    return;
+  }
+
+  store.sheetRefreshInFlight = true;
+  try {
+    await loadStationsFromGoogleSheet({ background: true });
+  } finally {
+    store.sheetRefreshInFlight = false;
+  }
+}
+
+function resolveGoogleSheetFetchUrl(url) {
+  const rawUrl = String(url || "").trim();
+  if (!rawUrl) {
+    return "";
+  }
+
+  if (/docs\.google\.com\/spreadsheets\/d\//i.test(rawUrl)) {
+    const parsed = parseGoogleSheetDocumentUrl(rawUrl);
+    if (parsed?.spreadsheetId) {
+      return buildGoogleSheetCsvExportUrl(parsed.spreadsheetId, parsed.gid);
+    }
+  }
+
+  return rawUrl;
+}
+
+function parseGoogleSheetDocumentUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      return null;
+    }
+
+    const hashMatch = parsed.hash.match(/gid=(\d+)/i);
+    return {
+      spreadsheetId: match[1],
+      gid: parsed.searchParams.get("gid") || (hashMatch ? hashMatch[1] : ""),
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildGoogleSheetCsvExportUrl(spreadsheetId, gid) {
+  const gidParam = String(gid || "").trim();
+  return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheetId)}/export?format=csv${gidParam ? `&gid=${encodeURIComponent(gidParam)}` : ""}`;
+}
+
+function parseSheetStationSource(rawText, contentType) {
+  const text = String(rawText || "").trim();
+  if (!text) {
+    return [];
+  }
+
+  if (text.startsWith("<!DOCTYPE html") || text.startsWith("<html")) {
+    throw new Error("Google Sheet URL นี้ยังเปิดให้อ่านสาธารณะไม่ได้ ให้ตั้งเป็น Anyone with the link can view ก่อน");
+  }
+
+  if (contentType.includes("application/json") || text.startsWith("{") || text.startsWith("[")) {
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      throw new Error("Google Sheet endpoint ส่ง JSON กลับมาไม่ถูกต้อง");
+    }
+    return extractSheetStationRows(payload);
+  }
+
+  return parseCsvRows(text);
+}
+
+function extractSheetStationRows(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && Array.isArray(payload.stations)) {
+    return payload.stations;
+  }
+  if (payload && Array.isArray(payload.rows)) {
+    return payload.rows;
+  }
+  return [];
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        value += '"';
+        index += 1;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        value += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+      continue;
+    }
+
+    if (char === ",") {
+      row.push(value);
+      value = "";
+      continue;
+    }
+
+    if (char === "\r") {
+      continue;
+    }
+
+    if (char === "\n") {
+      row.push(value);
+      rows.push(row);
+      row = [];
+      value = "";
+      continue;
+    }
+
+    value += char;
+  }
+
+  if (value.length || row.length) {
+    row.push(value);
+    rows.push(row);
+  }
+
+  if (!rows.length) {
+    return [];
+  }
+
+  const [headerRow, ...dataRows] = rows;
+  const headers = headerRow.map((header) => normalizeHeader(header));
+  return dataRows
+    .filter((dataRow) => dataRow.some((cell) => String(cell || "").trim()))
+    .map((dataRow) =>
+      Object.fromEntries(headers.map((header, index) => [header, dataRow[index] === undefined ? "" : dataRow[index]]))
+    );
+}
+
+function normalizeHeader(value) {
+  return String(value || "")
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9_]/g, "");
+}
+
+function mapSheetStationRow(row) {
+  const id = String(readSheetValue(row, "id", "stationId", "station_id") || "").trim();
+  if (!id) {
+    return null;
+  }
+
+  const updatedValue =
+    readSheetValue(row, "updatedAt", "updated_at", "reportTime", "report_time", "lastUpdatedAt", "last_updated_at", "createdAt", "created_at") ||
+    "";
+
+  return {
+    id,
+    name: String(readSheetValue(row, "name") || id).trim(),
+    brand: normalizeBrandLabel(readSheetValue(row, "brand")),
+    area: String(readSheetValue(row, "area", "district") || "ยังไม่ระบุพื้นที่").trim(),
+    lat: coerceNumber(readSheetValue(row, "lat", "latitude")),
+    lng: coerceNumber(readSheetValue(row, "lng", "lon", "longitude")),
+    reportCount: Math.max(0, Math.round(Number(readSheetValue(row, "reportCount", "report_count") || 0) || 0)),
+    updatedMinutes: minutesSince(updatedValue),
+    updatedAtMs: timestampToMs(updatedValue),
+    fuelStates: normalizeFuelStates(readSheetFuelStates(row)),
+    photoUrl: String(readSheetValue(row, "photoUrl", "photo_url") || "").trim(),
+    importSource: String(readSheetValue(row, "importSource", "import_source", "source") || "google-sheet").trim(),
+    lastReporter: String(readSheetValue(row, "lastReporter", "last_reporter") || "").trim(),
+  };
+}
+
+function markChangedGoogleSheetStations(nextStations, previousStations) {
+  if (!Array.isArray(nextStations) || !nextStations.length || !Array.isArray(previousStations) || !previousStations.length) {
+    return nextStations;
+  }
+
+  const previousById = new Map(previousStations.map((station) => [station.id, station]));
+
+  return nextStations.map((station) => {
+    const previous = previousById.get(station.id);
+    if (!previous || !didGoogleSheetStationChange(previous, station)) {
+      return station;
+    }
+
+    if (Number(station.updatedAtMs || 0) > Number(previous.updatedAtMs || 0)) {
+      return station;
+    }
+
+    return {
+      ...station,
+      updatedAtMs: Date.now(),
+      updatedMinutes: 0,
+      lastReporter: station.lastReporter || "Google Sheet",
+    };
+  });
+}
+
+function didGoogleSheetStationChange(previous, next) {
+  if (
+    previous.name !== next.name ||
+    previous.brand !== next.brand ||
+    previous.area !== next.area ||
+    previous.lat !== next.lat ||
+    previous.lng !== next.lng ||
+    previous.reportCount !== next.reportCount ||
+    previous.photoUrl !== next.photoUrl ||
+    previous.lastReporter !== next.lastReporter
+  ) {
+    return true;
+  }
+
+  return FUELS.some((fuel) => (previous.fuelStates?.[fuel.id] || "unknown") !== (next.fuelStates?.[fuel.id] || "unknown"));
+}
+
+function readSheetFuelStates(row) {
+  const directFuelStates = readSheetValue(row, "fuelStates");
+  if (directFuelStates && typeof directFuelStates === "object") {
+    return directFuelStates;
+  }
+
+  if (typeof directFuelStates === "string") {
+    try {
+      return JSON.parse(directFuelStates);
+    } catch (error) {
+      return createUnknownFuelMap();
+    }
+  }
+
+  return {
+    diesel: readSheetValue(row, "fuel_diesel", "diesel", "fuelDiesel") || "unknown",
+    gas91: readSheetValue(row, "fuel_gas91", "gas91", "fuelGas91") || "unknown",
+    gas95: readSheetValue(row, "fuel_gas95", "gas95", "fuelGas95") || "unknown",
+    e20: readSheetValue(row, "fuel_e20", "e20", "fuelE20") || "unknown",
+    e85: readSheetValue(row, "fuel_e85", "e85", "fuelE85") || "unknown",
+    lpg: readSheetValue(row, "fuel_lpg", "lpg", "fuelLpg") || "unknown",
+  };
+}
+
+function readSheetValue(row, ...keys) {
+  if (!row || typeof row !== "object") {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    if (key in row && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
+      return row[key];
+    }
+
+    const normalizedKey = normalizeHeader(key);
+    if (normalizedKey in row && row[normalizedKey] !== undefined && row[normalizedKey] !== null && String(row[normalizedKey]).trim() !== "") {
+      return row[normalizedKey];
+    }
+  }
+
+  return undefined;
+}
+
+function setFirebaseListenerState(source, status, count) {
+  const listener = store.firebaseStatus.listeners[source];
+  if (!listener) {
+    return;
+  }
+  listener.status = status;
+  if (typeof count === "number") {
+    listener.count = count;
+  }
+}
+
+function getFirebaseErrorCode(error) {
+  return String(error?.code || "").trim().toLowerCase();
+}
+
+function isQuotaExceededError(error) {
+  const code = getFirebaseErrorCode(error);
+  const message = String(error?.message || "").trim().toLowerCase();
+  return (
+    code.includes("quota-exceeded") ||
+    code.includes("resource-exhausted") ||
+    message.includes("quota exceeded") ||
+    message.includes("quota-exceeded") ||
+    message.includes("resource-exhausted")
+  );
+}
+
+function noteFirebaseError(source, error) {
+  syncFirebaseComponentState();
+  store.firebaseStatus.lastError = humanizeError(error);
+  store.firebaseStatus.lastErrorCode = getFirebaseErrorCode(error);
+  store.firebaseStatus.lastErrorSource = source;
+  store.firebaseStatus.lastErrorAtMs = Date.now();
+  setFirebaseListenerState(source, "error");
+}
+
+function maybeTrackFirebaseError(source, error) {
+  const code = getFirebaseErrorCode(error);
+  const message = String(error?.message || "").trim().toLowerCase();
+  if (
+    code ||
+    message.includes("firebase") ||
+    message.includes("firestore") ||
+    message.includes("quota exceeded") ||
+    message.includes("quota-exceeded") ||
+    message.includes("resource-exhausted")
+  ) {
+    noteFirebaseError(source, error);
+  }
+}
+
 function hasFirebaseConfig() {
   return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 }
@@ -2820,7 +3723,179 @@ function humanizeLocationError(error) {
 }
 
 function humanizeError(error) {
+  if (!error) {
+    return "เกิดข้อผิดพลาด";
+  }
+
+  const code = getFirebaseErrorCode(error);
+  const message = String(error?.message || "").trim().toLowerCase();
+  if (isQuotaExceededError(error)) {
+    return "Quota exceeded: โปรเจกต์ Firebase นี้เกินโควตาแล้ว ให้เช็ค Usage/Quota ใน Firebase console ก่อนใช้งานต่อ";
+  }
+  if (message.includes("failed to fetch")) {
+    return "ไม่สามารถโหลด endpoint ได้ ตรวจสอบ Google Sheet web app URL หรือเครือข่ายอีกครั้ง";
+  }
+  if (code.includes("permission-denied")) {
+    return "Permission denied: บัญชีนี้ยังไม่มีสิทธิ์ตาม Firestore rules หรือ admin allowlist";
+  }
+  if (code.includes("unauthenticated")) {
+    return "กรุณาเข้าสู่ระบบด้วย Google ใหม่ก่อนทำรายการนี้";
+  }
+  if (code.includes("unavailable")) {
+    return "Firebase ยังไม่พร้อมตอบสนองหรือเครือข่ายมีปัญหา ลองใหม่อีกครั้ง";
+  }
+  if (code.includes("deadline-exceeded")) {
+    return "Firebase ใช้เวลาตอบกลับนานเกินไป ลองใหม่อีกครั้ง";
+  }
+  if (code.includes("already-exists")) {
+    return "ข้อมูลนี้มีอยู่แล้วใน Firebase";
+  }
+  if (code.includes("not-found")) {
+    return "ไม่พบข้อมูลที่ต้องการใน Firebase";
+  }
   return error?.message || String(error || "เกิดข้อผิดพลาด");
+}
+
+function getAdminFirebaseHealthSummary() {
+  const listeners = store.firebaseStatus.listeners;
+  const allowlist = getAdminEmailAllowlist();
+  const quotaExceeded = isQuotaExceededError({
+    code: store.firebaseStatus.lastErrorCode,
+    message: store.firebaseStatus.lastError,
+  });
+  const stationsReady = listeners.stations.status === "ok" || (store.stationSource.type === "google-sheet" && listeners.stations.status === "sheet");
+  const listenersReady = stationsReady && listeners.reports.status === "ok";
+
+  if (!store.firebaseStatus.configReady) {
+    return {
+      label: "Config missing",
+      detail: "ยังไม่ได้ใส่ Firebase config ครบใน firebase-config.js",
+      note: "หน้านี้จะยังทำงานแบบ demo จนกว่าจะใส่ apiKey, projectId และ appId ครบ",
+    };
+  }
+
+  if (quotaExceeded) {
+    return {
+      label: "Quota exceeded",
+      detail: "โปรเจกต์นี้ชนลิมิตของ Firebase/Firestore แล้ว ตอนนี้หน้าเว็บ fallback เป็น demo",
+      note: "ถ้ายังต้องใช้หลังบ้านจริง ให้เปิด Firebase console ไปดู Usage และ Quotas ก่อน",
+    };
+  }
+
+  if (store.mode !== "firebase") {
+    return {
+      label: "Fallback demo",
+      detail: store.firebaseStatus.lastError || "ยังเชื่อม Firebase จริงไม่สำเร็จ",
+      note: "ตอนนี้ข้อมูลบนหน้า admin ยังไม่ใช่ข้อมูลสดจาก Firestore",
+    };
+  }
+
+  if (!listenersReady) {
+    return {
+      label: "Syncing",
+      detail: `stations: ${listeners.stations.status}, reports: ${listeners.reports.status}`,
+      note: "Firebase ต่อแล้ว แต่ยังรอ listener ของ Firestore กลับมาครบ",
+    };
+  }
+
+  if (!store.authReady) {
+    return {
+      label: "Checking auth",
+      detail: "กำลังตรวจสอบสถานะ Google sign-in",
+      note: "รอ auth state พร้อมก่อน ระบบถึงจะตัดสินได้ว่าเขียนข้อมูลได้หรือไม่",
+    };
+  }
+
+  if (!isGoogleUser()) {
+    return {
+      label: "Need sign-in",
+      detail: "Firebase พร้อมแล้ว แต่ยังไม่ได้ล็อกอิน Google",
+      note: "ต้องล็อกอิน Google ก่อนถึงจะเขียนข้อมูลหรือ import stations ได้",
+    };
+  }
+
+  if (!hasAdminAccess()) {
+    return {
+      label: "No admin access",
+      detail: allowlist.length ? "อีเมลนี้ยังไม่อยู่ใน appSettings.adminEmails" : "บัญชีนี้ยังไม่ผ่านเงื่อนไข admin access",
+      note: "ต่อให้เชื่อม Firebase ได้ แต่ถ้า admin access ไม่ผ่าน การบันทึกก็จะโดนปฏิเสธ",
+    };
+  }
+
+  if (store.stationSource.type === "google-sheet") {
+    return {
+      label: "Ready / sheet stations",
+      detail: "หน้า public กำลังใช้ stations จาก Google Sheet ส่วนรายงานและ auth ยังใช้ Firebase",
+      note: "ถ้าจะแก้ข้อมูลสถานีให้แก้ใน Google Sheet แล้ว publish endpoint ใหม่ ไม่ใช่แก้ใน Firestore",
+    };
+  }
+
+  if (!allowlist.length) {
+    return {
+      label: "Ready / review rules",
+      detail: "เชื่อม Firebase ได้และเขียนได้ แต่ appSettings.adminEmails ยังว่างอยู่",
+      note: "ก่อนใช้งานจริงควรเติม adminEmails และล็อก Firestore rules ให้ตรงกับผู้ดูแลระบบ",
+    };
+  }
+
+  return {
+    label: "Ready",
+    detail: "Firestore listener, Google auth และ admin access พร้อมใช้งาน",
+    note: "จากฝั่งหน้าเว็บตอนนี้พร้อมใช้งานแล้ว ถ้า Firebase console ไม่ขึ้น quota exceeded เพิ่มเติม",
+  };
+}
+
+function getAdminFirebaseIssueSummary() {
+  if (!store.firebaseStatus.lastError) {
+    return store.mode === "firebase"
+      ? {
+          label: "No errors",
+          detail: "ยังไม่พบข้อผิดพลาดจาก Firebase ในรอบนี้",
+        }
+      : {
+          label: "No recent error",
+          detail: "ยังไม่มีข้อผิดพลาด Firebase ล่าสุดที่บันทึกไว้",
+        };
+  }
+
+  const shortCode = store.firebaseStatus.lastErrorCode ? store.firebaseStatus.lastErrorCode.split("/").pop() : "";
+  const timestamp = formatAdminTimestamp(store.firebaseStatus.lastErrorAtMs);
+  const label = isQuotaExceededError({
+    code: store.firebaseStatus.lastErrorCode,
+    message: store.firebaseStatus.lastError,
+  })
+    ? "Quota exceeded"
+    : shortCode || store.firebaseStatus.lastErrorSource || "Firebase error";
+  const detail = [store.firebaseStatus.lastError, timestamp ? `เมื่อ ${timestamp}` : ""].filter(Boolean).join(" | ");
+
+  return { label, detail };
+}
+
+function renderAdminFirebaseStatus() {
+  const health = getAdminFirebaseHealthSummary();
+  const issue = getAdminFirebaseIssueSummary();
+  setText("[data-admin-firebase-health]", health.label);
+  setText("[data-admin-firebase-detail]", health.detail);
+  setText("[data-admin-last-error]", issue.label);
+  setText("[data-admin-last-error-detail]", issue.detail);
+  setText("[data-admin-summary-note]", health.note);
+}
+
+function formatAdminTimestamp(value) {
+  if (!value) {
+    return "";
+  }
+
+  try {
+    return new Date(value).toLocaleString("th-TH", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (error) {
+    return "";
+  }
 }
 
 function coerceNumber(value) {
@@ -2843,6 +3918,13 @@ function parseOptionalNumber(value) {
 function timestampToMs(value) {
   if (typeof value === "number") {
     return value;
+  }
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : Date.now();
   }
   if (value && typeof value.toMillis === "function") {
     return value.toMillis();
@@ -2928,4 +4010,122 @@ function escapeHtml(value) {
 
 function minutesAgoToMs(minutes) {
   return Date.now() - minutes * 60000;
+}
+
+async function importPumpRadarStationsV3() {
+  const messageBox = document.querySelector("[data-admin-import-message]");
+  setMessage(messageBox, "Validating PumpRadar payload...");
+
+  try {
+    if (store.stationSource.type === "google-sheet") {
+      throw new Error("หน้าเว็บตั้งให้ใช้ Google Sheet เป็นแหล่งข้อมูลสถานีอยู่ ให้แปลง JSON ไปลง Sheet แล้ว publish endpoint ใหม่แทน");
+    }
+    if (store.mode !== "firebase" || !store.db) {
+      throw new Error("Firestore is not connected in this mode.");
+    }
+    if (!hasAdminAccess()) {
+      throw new Error("Please sign in with a Google account that has admin access before importing.");
+    }
+
+    const raw = await readAdminImportText();
+    const provincePayloads = parsePumpRadarPayloadV3(raw);
+    const requestedSlugs = readAdminImportProvinceSlugs();
+    const selection = filterProvincePayloadsForImport(provincePayloads, requestedSlugs);
+    const stationMap = new Map();
+
+    selection.payloads.forEach((payload) => {
+      payload.stations
+        .map((station) => buildPumpRadarStationEntry(station, payload.province))
+        .filter(Boolean)
+        .forEach((entry) => {
+          stationMap.set(entry.id, entry);
+        });
+    });
+
+    const stationEntries = [...stationMap.values()];
+
+    if (!stationEntries.length) {
+      throw new Error("No stations were found in this PumpRadar JSON payload.");
+    }
+
+    const selectionLabel = describeProvinceImportSelection(selection);
+    setMessage(messageBox, `Importing ${stationEntries.length} stations from ${selectionLabel}...`);
+    await writeDocsInBatches(appSettings.collections.stations, stationEntries);
+    setMessage(messageBox, `Imported ${stationEntries.length} stations from ${selection.payloads.length} province payloads (${selectionLabel}).`);
+  } catch (error) {
+    console.error(error);
+    maybeTrackFirebaseError("admin-import", error);
+    setMessage(messageBox, humanizeError(error));
+  }
+}
+
+function parsePumpRadarPayloadV3(raw) {
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (error) {
+    throw new Error("Invalid JSON. Please check that the content is complete.");
+  }
+
+  if (payload && Array.isArray(payload.stations)) {
+    return [normalizePumpRadarProvincePayloadV3(payload)];
+  }
+
+  if (Array.isArray(payload)) {
+    const provinces = payload
+      .filter((item) => item && Array.isArray(item.stations))
+      .map(normalizePumpRadarProvincePayloadV3);
+
+    if (provinces.length) {
+      return provinces;
+    }
+  }
+
+  if (payload && Array.isArray(payload.provinces)) {
+    const provinces = payload.provinces
+      .filter((item) => item && Array.isArray(item.stations))
+      .map(normalizePumpRadarProvincePayloadV3);
+
+    if (provinces.length) {
+      return provinces;
+    }
+  }
+
+  throw new Error("This JSON is not a PumpRadar province payload or multi-province bundle.");
+}
+
+function normalizePumpRadarProvincePayloadV3(payload) {
+  return {
+    province: String(payload.province || payload.provinceName || payload.provinceSlug || "").trim(),
+    provinceSlug: String(payload.provinceSlug || "").trim(),
+    stations: Array.isArray(payload.stations) ? payload.stations : [],
+  };
+}
+
+function downloadPumpRadarProvinceJsonV3() {
+  const messageBox = document.querySelector("[data-admin-import-message]");
+
+  try {
+    const slugs = readAdminImportProvinceSlugs({ required: true });
+
+    if (slugs.length > 1 || slugs[0] === "all" || slugs[0] === "*") {
+      const target =
+        slugs[0] === "all" || slugs[0] === "*"
+          ? "powershell -ExecutionPolicy Bypass -File .\\tools\\fetch-pumpradar-provinces.ps1 -All"
+          : `powershell -ExecutionPolicy Bypass -File .\\tools\\fetch-pumpradar-provinces.ps1 -Province ${slugs.join(",")}`;
+      setMessage(messageBox, `Use this command in PowerShell: ${target}`);
+      return;
+    }
+
+    const url = buildPumpRadarProvinceUrl(slugs[0]);
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.click();
+    setMessage(messageBox, `Opened PumpRadar JSON for ${slugs[0]} in a new tab.`);
+  } catch (error) {
+    console.error(error);
+    setMessage(messageBox, humanizeError(error));
+  }
 }

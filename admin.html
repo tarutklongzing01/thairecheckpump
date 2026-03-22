@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Admin | Thairecheckpump</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260321-8" />
-    <script type="module" src="firebase-app.js?v=20260321-8"></script>
+    <link rel="stylesheet" href="styles.css?v=20260322-2" />
+    <script type="module" src="firebase-app.js?v=20260322-2"></script>
   </head>
   <body data-page="admin">
     <div class="site-shell">
@@ -75,8 +75,18 @@
                   <span>สิทธิ์เขียน</span>
                   <strong data-admin-write>-</strong>
                 </div>
+                <div class="stat-card admin-stat-card">
+                  <span>Firebase Health</span>
+                  <strong data-admin-firebase-health>-</strong>
+                  <small data-admin-firebase-detail>กำลังตรวจสอบ Firebase</small>
+                </div>
+                <div class="stat-card admin-stat-card">
+                  <span>Last Error</span>
+                  <strong data-admin-last-error>-</strong>
+                  <small data-admin-last-error-detail>ยังไม่พบข้อผิดพลาดล่าสุด</small>
+                </div>
               </div>
-              <p class="admin-summary-note">ต้องเชื่อม Firestore และมี auth ก่อนบันทึกการแก้ไขข้อมูล</p>
+              <p class="admin-summary-note" data-admin-summary-note>ต้องเชื่อม Firestore และมี auth ก่อนบันทึกการแก้ไขข้อมูล</p>
             </div>
           </div>
         </section>
@@ -110,8 +120,8 @@
               <div class="form-grid admin-import-grid">
                 <label class="field">
                   <span>Province Slug</span>
-                  <input class="input" type="text" value="chonburi" placeholder="chonburi" data-admin-import-province />
-                  <small class="muted">เช่น chonburi, rayong, bangkok</small>
+                  <select class="input" data-admin-import-province></select>
+                  <small class="muted">เลือกจังหวัดจาก dropdown แล้วระบบจะใช้ slug นี้กับทั้ง download และ import</small>
                 </label>
 
                 <div class="field">
@@ -125,6 +135,7 @@
                 <label class="field field-full">
                   <span>ไฟล์ JSON</span>
                   <input class="input" type="file" accept=".json,application/json" data-admin-import-file />
+                  <small class="muted">รองรับไฟล์รวมหลายจังหวัดจาก <code>tools/fetch-pumpradar-provinces.ps1</code> และจะกรองตาม Province Slug ตอน import</small>
                   <small class="muted">ถ้าดึงจากเว็บตรงไม่ได้ ให้โหลด JSON ลงเครื่องก่อนแล้วเลือกไฟล์ที่นี่</small>
                 </label>
 
