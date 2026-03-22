@@ -1049,7 +1049,7 @@ function createFeedController() {
       setText("[data-feed-total]", `${reports.length}`);
       setText("[data-feed-urgent]", `${reports.filter((report) => ["low", "empty"].includes(report.status)).length}`);
       setText("[data-feed-photo]", `${reports.filter((report) => Boolean(report.photoUrl)).length}`);
-      setText("[data-feed-contributors]", `${new Set(reports.map((report) => report.reporter)).size}`);
+      setText("[data-feed-contributors]", `${new Set(reports.map((report) => normalizeReporterLabel(report.reporter))).size}`);
 
       const averageAge = reports.length ? Math.round(reports.reduce((total, report) => total + getReportAge(report), 0) / reports.length) : 0;
       setText("[data-feed-average-age]", averageAge ? `${averageAge} นาที` : "-");
@@ -1190,7 +1190,7 @@ function createAboutController() {
       setText("[data-about-stations]", `${runtime.stations.length}`);
       setText("[data-about-reports]", `${runtime.reports.length}`);
       setText("[data-about-fuels]", `${FUELS.length}`);
-      setText("[data-about-contributors]", `${new Set(runtime.reports.map((report) => report.reporter)).size}`);
+      setText("[data-about-contributors]", `${new Set(runtime.reports.map((report) => normalizeReporterLabel(report.reporter))).size}`);
     },
   };
 }
@@ -2364,7 +2364,7 @@ function buildPumpRadarStationEntry(station, provinceName) {
       importSource: "thaipumpradar",
       importProvince: String(station.province || provinceName || "").trim(),
       lastReportId: String(latestReport?.id || "").trim(),
-      lastReporter: "PumpRadar",
+      lastReporter: "Thairecheckpump",
     },
   };
 }
@@ -2632,7 +2632,7 @@ function buildStationFeedItem(station) {
     fuel: signal.fuel,
     status: signal.status,
     note: `อัปเดตจาก Google Sheet | พร้อมจ่าย ${readyFuelCount}/${FUELS.length} | มีข้อมูล ${knownFuelCount}/${FUELS.length}`,
-    reporter: station.lastReporter || "Google Sheet",
+    reporter: normalizeReporterLabel(station.lastReporter) || "Google Sheet",
     createdBy: "",
     createdAtMs: updatedAtMs,
     updatedAtMs,
@@ -2733,7 +2733,7 @@ function mapStationDoc(snapshot) {
     fuelStates: normalizeFuelStates(data.fuelStates),
     photoUrl: data.photoUrl || "",
     importSource: data.importSource || "",
-    lastReporter: data.lastReporter || "",
+    lastReporter: normalizeReporterLabel(data.lastReporter),
   };
 }
 
@@ -3046,6 +3046,9 @@ function formatFeedSourceLabel(value) {
   if (!source) {
     return store.mode;
   }
+  if (["pumpradar", "pump radar", "thaipumpradar", "thai pump radar"].includes(source)) {
+    return "Thairecheckpump";
+  }
   if (source === "google-sheet" || source === "sheet" || source === "google_sheets") {
     return "Google Sheet";
   }
@@ -3077,7 +3080,7 @@ function renderFeedCard(report) {
       <p class="muted">${escapeHtml(report.area)} | ${escapeHtml(FUEL_LABELS[report.fuel] || report.fuel)}</p>
       <p>${escapeHtml(report.note)}</p>
       <div class="detail-row muted">
-        <span>โดย ${escapeHtml(report.reporter)}</span>
+        <span>โดย ${escapeHtml(normalizeReporterLabel(report.reporter))}</span>
         <span>${Number.isFinite(report.lat) && Number.isFinite(report.lng) ? `${report.lat.toFixed(4)}, ${report.lng.toFixed(4)}` : "ไม่มีพิกัด"}</span>
       </div>
     </article>
@@ -3108,7 +3111,7 @@ function renderGalleryCard(report, index) {
         </div>
         <p>${escapeHtml(report.note)}</p>
         <div class="detail-row muted">
-          <span>โดย ${escapeHtml(report.reporter)}</span>
+          <span>โดย ${escapeHtml(normalizeReporterLabel(report.reporter))}</span>
           <span>${report.photoUrl && report.photoUrl !== "demo" ? "ภาพจาก Firebase Storage" : "ภาพ placeholder/เดโม"}</span>
         </div>
       </div>
@@ -3195,6 +3198,20 @@ function normalizeBrandLabel(value) {
 
   const mapped = BRAND_LABEL_MAP[text.toUpperCase()] || BRAND_LABEL_MAP[text];
   return mapped || text;
+}
+
+function normalizeReporterLabel(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  const normalized = text.toLowerCase();
+  if (["pumpradar", "pump radar", "thaipumpradar", "thai pump radar"].includes(normalized)) {
+    return "Thairecheckpump";
+  }
+
+  return text;
 }
 
 function cloneStation(station) {
@@ -3562,7 +3579,7 @@ function mapSheetStationRow(row) {
     fuelStates: normalizeFuelStates(readSheetFuelStates(row)),
     photoUrl: String(readSheetValue(row, "photoUrl", "photo_url") || "").trim(),
     importSource: String(readSheetValue(row, "importSource", "import_source", "source") || "google-sheet").trim(),
-    lastReporter: String(readSheetValue(row, "lastReporter", "last_reporter") || "").trim(),
+    lastReporter: normalizeReporterLabel(String(readSheetValue(row, "lastReporter", "last_reporter") || "").trim()),
   };
 }
 
