@@ -15,13 +15,13 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260322-2" />
+    <link rel="stylesheet" href="styles.css?v=20260322-8" />
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script type="module" src="firebase-app.js?v=20260322-2"></script>
+    <script type="module" src="firebase-app.js?v=20260322-8"></script>
   </head>
   <body data-page="home">
     <div class="site-shell">
@@ -40,7 +40,6 @@
             <a class="nav-link" href="report.html" data-nav="report">รายงาน</a>
             <a class="nav-link" href="gallery.html" data-nav="gallery">คลังภาพ</a>
             <a class="nav-link" href="dashboard.html" data-nav="dashboard">ข้อมูล</a>
-            <a class="nav-link" href="about.html" data-nav="about">เกี่ยวกับ</a>
           </nav>
           <a class="button button-outline" href="report.html">แจ้งเลย</a>
         </div>
@@ -53,7 +52,6 @@
             </div>
             <div class="status-cluster">
               <span class="muted" data-live-hint></span>
-              <button class="button button-ghost" type="button" data-request-location>ใช้ตำแหน่งฉัน</button>
             </div>
           </div>
         </div>
@@ -66,8 +64,8 @@
               <span class="eyebrow">Live Pump Monitor</span>
               <h1 class="headline">ปั๊มไหนมีน้ำมัน? <span class="accent-text">เช็กก่อนออก</span></h1>
               <p class="lede">
-                เว็บชุดนี้ถูกยกจากเดโม static ไปสู่โหมด Firebase-ready เพื่อรองรับ Firestore แบบเรียลไทม์
-                การอัปเดตรายงานสด ตำแหน่งผู้ใช้จากเบราว์เซอร์ และการส่งภาพขึ้น Storage ในหน้าเดียวกัน
+                ติดตามสถานีน้ำมันจากข้อมูลล่าสุดของระบบ ดูสถานะรายปั๊มบนแผนที่ คัดกรองตามเชื้อเพลิงและแบรนด์
+                พร้อมเปิดเส้นทางไปยังสถานีที่ต้องการได้จากหน้าเดียว
               </p>
               <div class="hero-actions">
                 <a class="button button-primary" href="#map">เปิดแผนที่สถานี</a>
@@ -99,7 +97,7 @@
                   <div class="metric-card">
                     <span>รายงานสะสม</span>
                     <strong data-home-reports>0</strong>
-                    <small>รวมจากชุมชนและข้อมูลเดโม</small>
+                    <small>รวมจากรายงานชุมชนและข้อมูลสถานีล่าสุด</small>
                   </div>
                 </div>
               </div>
@@ -177,8 +175,8 @@
 
       <footer class="site-footer">
         <div class="container footer-inner">
-          <span>Thairecheckpump Demo Frontend</span>
-          <span>สร้างจากโครงหน้าอ้างอิงและข้อมูลจำลองสำหรับเดโม | <span data-year></span></span>
+          <span>Thairecheckpump</span>
+          <span>แผนที่สถานี ฟีดรายงาน และข้อมูลล่าสุดของระบบ | <span data-year></span></span>
         </div>
       </footer>
     </div>

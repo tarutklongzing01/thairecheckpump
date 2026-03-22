@@ -17,8 +17,8 @@ export const appSettings = {
   maxFeedDocs: 80,
   dataSources: {
     stations: {
-      type: "google-sheet",
-      url: "https://docs.google.com/spreadsheets/d/15_Rc3INQqZ-qoCWBKiHGB2znQzO5O8G1GltH2ZwU1uA/edit?gid=447543159#gid=447543159",
+      type: "static-json",
+      url: "./stations-public.json",
     },
   },
   collections: {

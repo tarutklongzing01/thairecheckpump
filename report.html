@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Report | Thairecheckpump</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260322-2" />
-    <script type="module" src="firebase-app.js?v=20260322-2"></script>
+    <link rel="stylesheet" href="styles.css?v=20260322-8" />
+    <script type="module" src="firebase-app.js?v=20260322-8"></script>
   </head>
   <body data-page="report">
     <div class="site-shell">
@@ -25,9 +25,12 @@
             <a class="nav-link" href="report.html" data-nav="report">รายงาน</a>
             <a class="nav-link" href="gallery.html" data-nav="gallery">คลังภาพ</a>
             <a class="nav-link" href="dashboard.html" data-nav="dashboard">ข้อมูล</a>
-            <a class="nav-link" href="about.html" data-nav="about">เกี่ยวกับ</a>
           </nav>
-          <a class="button button-outline" href="feed.html">ดูฟีดสด</a>
+          <div class="topbar-actions">
+            <a class="button button-ghost" href="feed.html">ดูฟีดสด</a>
+            <button class="button button-primary" type="button" data-google-sign-in>เข้าสู่ระบบด้วย Google</button>
+            <button class="button button-outline" type="button" data-google-sign-out hidden>ออกจากระบบ</button>
+          </div>
         </div>
         <div class="container">
           <div class="statusbar">
@@ -38,9 +41,6 @@
             </div>
             <div class="status-cluster">
               <span class="muted" data-live-hint>รายงานจะส่งขึ้น Firestore และรูปจะขึ้น Storage เมื่อ config พร้อม</span>
-              <button class="button button-ghost" type="button" data-request-location>ใช้ตำแหน่งฉัน</button>
-              <button class="button button-primary" type="button" data-google-sign-in>เข้าสู่ระบบด้วย Google</button>
-              <button class="button button-outline" type="button" data-google-sign-out hidden>ออกจากระบบ</button>
             </div>
           </div>
         </div>
@@ -130,7 +130,7 @@
                 <div class="field field-full">
                   <button class="button button-primary" type="submit">บันทึกรายงาน</button>
                   <p class="form-note">ถ้าเชื่อม Firebase Storage สำเร็จ รูปจะถูกอัปโหลดจริง มิฉะนั้นระบบจะบันทึกเฉพาะข้อความรายงานโดยไม่แนบรูป</p>
-                  <p class="form-note" data-location-detail>กด "ใช้ตำแหน่งฉัน" ด้านบนเพื่อกรอกพิกัดอัตโนมัติ หรือกรอกละติจูด/ลองจิจูดเอง</p>
+                  <p class="form-note" data-location-detail>อนุญาตตำแหน่งจากเบราว์เซอร์เมื่อระบบร้องขอ หรือกรอกละติจูด/ลองจิจูดเอง</p>
                   <div class="message-box" aria-live="polite" data-form-message></div>
                 </div>
               </form>
@@ -148,8 +148,8 @@
 
       <footer class="site-footer">
         <div class="container footer-inner">
-          <span>Thairecheckpump Demo Report</span>
-          <span>หน้า report อ่านข้อมูลได้สาธารณะ แต่การส่งรายงานต้องใช้ Google sign-in | <span data-year></span></span>
+          <span>Thairecheckpump Report</span>
+          <span>หน้าแจ้งสถานีเปิดอ่านได้สาธารณะ และใช้ Google sign-in ก่อนส่งรายงาน | <span data-year></span></span>
         </div>
       </footer>
     </div>

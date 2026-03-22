@@ -17,8 +17,8 @@ export const appSettings = {
   maxFeedDocs: 80,
   dataSources: {
     stations: {
-      type: "firestore",
-      url: "",
+      type: "static-json",
+      url: "./stations-public.json",
     },
   },
   collections: {

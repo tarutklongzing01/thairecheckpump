@@ -8,6 +8,20 @@
 - `reports`, `auth`, และ admin reports ยังใช้ Firebase ได้ตามเดิม
 - ถ้าตั้ง `stations` เป็น Google Sheet แล้ว หน้า public จะไม่พึ่ง Firestore reads ของสถานี
 
+## ทางที่ปลอดภัยกว่า
+
+ถ้าไม่ต้องการให้ browser เห็นลิงก์ Google Sheet ตรงใน DevTools:
+
+- ใช้ Google Sheet เป็นที่กรอกข้อมูลหลังบ้านเหมือนเดิม
+- export CSV แล้วแปลงเป็น `stations-public.json`
+- ให้หน้าเว็บอ่าน `./stations-public.json` แทน
+
+คำสั่งแปลง CSV เป็น JSON:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\export-stations-public-json.ps1
+```
+
 ## 1. แปลง PumpRadar JSON เป็น CSV
 
 รันคำสั่งนี้จากโฟลเดอร์โปรเจกต์:

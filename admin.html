@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Admin | Thairecheckpump</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260322-2" />
-    <script type="module" src="firebase-app.js?v=20260322-2"></script>
+    <link rel="stylesheet" href="styles.css?v=20260322-8" />
+    <script type="module" src="firebase-app.js?v=20260322-8"></script>
   </head>
   <body data-page="admin">
     <div class="site-shell">
@@ -26,9 +26,12 @@
             <a class="nav-link" href="gallery.html" data-nav="gallery">คลังภาพ</a>
             <a class="nav-link" href="dashboard.html" data-nav="dashboard">ข้อมูล</a>
             <a class="nav-link" href="admin.html" data-nav="admin">หลังบ้าน</a>
-            <a class="nav-link" href="about.html" data-nav="about">เกี่ยวกับ</a>
           </nav>
-          <a class="button button-outline" href="index.html">กลับหน้าแผนที่</a>
+          <div class="topbar-actions">
+            <a class="button button-ghost" href="index.html">กลับหน้าแผนที่</a>
+            <button class="button button-primary" type="button" data-google-sign-in>เข้าสู่ระบบด้วย Google</button>
+            <button class="button button-outline" type="button" data-google-sign-out hidden>ออกจากระบบ</button>
+          </div>
         </div>
         <div class="container">
           <div class="statusbar">
@@ -39,9 +42,6 @@
             </div>
             <div class="status-cluster">
               <span class="muted" data-live-hint>หน้าหลังบ้านนี้จะแก้ไขข้อมูลคอลเลกชัน stations โดยตรงบน Firestore</span>
-              <button class="button button-ghost" type="button" data-request-location>ใช้ตำแหน่งฉัน</button>
-              <button class="button button-primary" type="button" data-google-sign-in>เข้าสู่ระบบด้วย Google</button>
-              <button class="button button-outline" type="button" data-google-sign-out hidden>ออกจากระบบ</button>
             </div>
           </div>
         </div>
