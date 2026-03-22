@@ -713,12 +713,24 @@ input[type="range"] {
 }
 
 .station-map {
+  position: relative;
   min-height: 540px;
   height: 100%;
   background:
     radial-gradient(circle at top left, rgba(15, 194, 192, 0.16), transparent 24%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 24%),
     rgba(5, 16, 24, 0.96);
+}
+
+.station-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 250;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(15, 194, 192, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(5, 16, 24, 0.18), rgba(5, 16, 24, 0.28));
 }
 
 .map-overlay-note {
@@ -749,6 +761,10 @@ input[type="range"] {
   height: 100%;
   font: inherit;
   background: #08131d;
+}
+
+.station-map .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) saturate(0.72) brightness(0.82) contrast(0.96);
 }
 
 .leaflet-control-zoom a {
@@ -798,6 +814,18 @@ input[type="range"] {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.6;
+}
+
+.map-popup-actions {
+  display: flex;
+  margin-top: 4px;
+}
+
+.map-popup-link {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  min-height: 40px;
 }
 
 .radar-stage {

@@ -941,6 +941,7 @@ function renderHomeMap(state, visibleStations, fuelId, radiusKm) {
 function renderHomeMapPopup(station, fuelId) {
   const meta = STATUS_META[station.fuels[fuelId] || "unknown"];
   const available = Object.values(station.fuels).filter((status) => statusScore(status) >= 0.66).length;
+  const externalMapUrl = buildExternalMapUrl(station.lat, station.lng);
 
   return `
     <article class="map-popup">
@@ -954,8 +955,15 @@ function renderHomeMapPopup(station, fuelId) {
       </div>
       <p>${escapeHtml(station.area)} | ${escapeHtml(FUEL_LABELS[fuelId])} ${escapeHtml(meta.label)}</p>
       <p>อัปเดต ${escapeHtml(formatShortAge(station.updatedMinutes))} | รายงานสะสม ${escapeHtml(String(station.reports))} | พร้อมจ่าย ${available}/${FUELS.length}</p>
+      <div class="map-popup-actions">
+        <a class="button button-primary map-popup-link" href="${escapeHtml(externalMapUrl)}" target="_blank" rel="noopener noreferrer">เปิดใน Google Maps</a>
+      </div>
     </article>
   `;
+}
+
+function buildExternalMapUrl(lat, lng) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}`;
 }
 
 function setHomeMapNote(message) {
