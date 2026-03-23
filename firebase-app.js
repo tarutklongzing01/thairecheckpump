@@ -4296,25 +4296,31 @@ function normalizeAdminNetlifyUsage(payload) {
   const buildCount = Number(payload?.buildCount || 0) || 0;
   const activeBuilds = Number(payload?.active || payload?.activeBuilds || 0) || 0;
   const queuedBuilds = Number(payload?.enqueued || payload?.queuedBuilds || 0) || 0;
+  const hasUsageQuota = includedMinutes > 0;
+  const displayState = state === "ok" && !hasUsageQuota ? "connected" : state;
   const label =
-    state === "missing-config"
+    displayState === "missing-config"
       ? "ยังไม่ได้เชื่อม"
-      : state === "danger"
-        ? `${Math.round(percent)}% เต็ม`
-        : state === "warning"
-          ? `${Math.round(percent)}% ใช้แล้ว`
-          : includedMinutes > 0
+      : displayState === "connected"
+        ? "เชื่อมแล้ว"
+        : displayState === "danger"
+          ? `${Math.round(percent)}% เต็ม`
+          : displayState === "warning"
             ? `${Math.round(percent)}% ใช้แล้ว`
-            : "เช็กได้";
+            : hasUsageQuota
+              ? `${Math.round(percent)}% ใช้แล้ว`
+              : "เช็กได้";
   const detail =
-    state === "missing-config"
+    displayState === "missing-config"
       ? payload?.detail || "ยังไม่ได้ตั้ง NETLIFY_API_TOKEN และ NETLIFY_ACCOUNT_ID"
-      : includedMinutes > 0
-        ? `${formatAdminNumber(usedMinutes)} / ${formatAdminNumber(includedMinutes)} นาทีในรอบบิลนี้`
-        : payload?.detail || "ยังไม่พบข้อมูล limit จาก Netlify";
+      : displayState === "connected"
+        ? "Netlify API ต่อได้แล้ว แต่แพลนนี้ยังไม่ส่ง quota build minutes ให้คำนวณเป็น %"
+        : hasUsageQuota
+          ? `${formatAdminNumber(usedMinutes)} / ${formatAdminNumber(includedMinutes)} นาทีในรอบบิลนี้`
+          : payload?.detail || "ยังไม่พบข้อมูล limit จาก Netlify";
 
   return {
-    status: state,
+    status: displayState,
     label,
     detail,
     percent,
@@ -4325,9 +4331,11 @@ function normalizeAdminNetlifyUsage(payload) {
     queuedBuilds,
     updatedAt: payload?.lastUpdatedAt || payload?.updatedAt || "",
     note:
-      payload?.periodLabel ||
-      payload?.note ||
-      "ตัวนี้เช็ก build minutes ของ Netlify ไม่ได้วัดข้อมูล Firebase หรือโควตา Firestore",
+      displayState === "connected"
+        ? `${payload?.periodLabel || "รอบบิลปัจจุบัน"} | API ต่อได้แล้ว แต่ยังไม่มีตัวหาร build minutes จากแพลนนี้`
+        : payload?.periodLabel ||
+          payload?.note ||
+          "ตัวนี้เช็ก build minutes ของ Netlify ไม่ได้วัดข้อมูล Firebase หรือโควตา Firestore",
   };
 }
 
@@ -4359,7 +4367,7 @@ function renderAdminNetlifyUsage() {
   }
   if (progressValue) {
     const rawPercent = Number(usage.percent || 0);
-    progressValue.textContent = Number.isFinite(rawPercent) && rawPercent > 0 ? `${Math.round(rawPercent)}%` : "0%";
+    progressValue.textContent = usage.status === "connected" ? "N/A" : Number.isFinite(rawPercent) && rawPercent > 0 ? `${Math.round(rawPercent)}%` : "0%";
   }
 }
 
