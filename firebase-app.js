@@ -315,6 +315,7 @@ const store = {
   stationSource: {
     type: "demo",
     url: "",
+    generatedAtMs: 0,
   },
   app: null,
   analytics: null,
@@ -2665,8 +2666,16 @@ function buildStationFeedItem(station) {
   const updatedAtMs = Number.isFinite(station.updatedAtMs)
     ? station.updatedAtMs
     : Date.now() - (Number(station.updatedMinutes || 0) * 60000);
+  const importedAtMs =
+    store.stationSource.type === "static-json" && Number.isFinite(store.stationSource.generatedAtMs)
+      ? store.stationSource.generatedAtMs
+      : 0;
   const knownFuelCount = Object.values(normalizedFuelStates).filter((status) => status !== "unknown").length;
   const readyFuelCount = Object.values(normalizedFuelStates).filter((status) => statusScore(status) >= 0.66).length;
+  const note =
+    store.stationSource.type === "static-json" && importedAtMs > 0
+      ? `อัปขึ้นเว็บ ${formatAge(getAgeMinutesFromMs(importedAtMs))} | ข้อมูลสถานีจริง ${formatAge(getAgeMinutesFromMs(updatedAtMs))} | พร้อมจ่าย ${readyFuelCount}/${FUELS.length} | มีข้อมูล ${knownFuelCount}/${FUELS.length}`
+      : `อัปเดตจาก ${getStationSourceLabel()} | พร้อมจ่าย ${readyFuelCount}/${FUELS.length} | มีข้อมูล ${knownFuelCount}/${FUELS.length}`;
 
   return {
     id: `station-snapshot-${station.id}`,
@@ -2679,6 +2688,7 @@ function buildStationFeedItem(station) {
     fuel: signal.fuel,
     status: signal.status,
     note: `อัปเดตจาก ${getStationSourceLabel()} | พร้อมจ่าย ${readyFuelCount}/${FUELS.length} | มีข้อมูล ${knownFuelCount}/${FUELS.length}`,
+    ...(importedAtMs > 0 ? { note, importedAtMs } : { importedAtMs }),
     reporter: normalizeReporterLabel(station.lastReporter) || getStationSourceLabel(),
     createdBy: "",
     createdAtMs: updatedAtMs,
@@ -3117,6 +3127,12 @@ function formatFeedSourceLabel(value) {
 
 function renderFeedCard(report) {
   const meta = STATUS_META[report.status || "unknown"];
+  const importedBadge =
+    (report.source === "static-json" || report.source === "static_json" || report.source === "json") &&
+    Number.isFinite(report.importedAtMs) &&
+    report.importedAtMs > 0
+      ? `<span class="tiny-badge">นำเข้า ${escapeHtml(formatAge(getAgeMinutesFromMs(report.importedAtMs)))}</span>`
+      : "";
   return `
     <article class="feed-card">
       <div class="feed-head">
@@ -3126,10 +3142,11 @@ function renderFeedCard(report) {
             <span class="status-badge ${meta.tone}">${escapeHtml(meta.label)}</span>
             ${report.photoUrl ? '<span class="tiny-badge">มีภาพยืนยัน</span>' : ""}
             <span class="tiny-badge">${escapeHtml(formatFeedSourceLabel(report.source || store.mode))}</span>
+            ${importedBadge}
           </div>
           <h3>${escapeHtml(report.station)}</h3>
         </div>
-        <span class="tiny-badge">${formatAge(getReportAge(report))}</span>
+        <span class="tiny-badge">${formatAge(getFeedCardAge(report))}</span>
       </div>
       <p class="muted">${escapeHtml(report.area)} | ${escapeHtml(FUEL_LABELS[report.fuel] || report.fuel)}</p>
       <p>${escapeHtml(report.note)}</p>
@@ -3449,10 +3466,11 @@ function canLoadStationsFromStaticJson() {
   return source.type === "static-json" && Boolean(source.url);
 }
 
-function setStationSource(type, url = "") {
+function setStationSource(type, url = "", options = {}) {
   store.stationSource = {
     type,
     url,
+    generatedAtMs: Number.isFinite(options.generatedAtMs) ? options.generatedAtMs : 0,
   };
 }
 
@@ -3506,6 +3524,7 @@ async function loadStationsFromGoogleSheet(options = {}) {
 
     const contentType = String(response.headers.get("content-type") || "").toLowerCase();
     const rawText = await response.text();
+    const generatedAtMs = getStationSourceGeneratedAtMs(parseStationSourceMetadata(rawText, contentType));
     const rows = parseSheetStationSource(rawText, contentType, "Google Sheet endpoint");
     const parsedStations = rows.map(mapSheetStationRow).filter(Boolean);
     const stations = markChangedGoogleSheetStations(parsedStations, store.stationSource.type === "google-sheet" ? store.stations : []);
@@ -3513,7 +3532,7 @@ async function loadStationsFromGoogleSheet(options = {}) {
       throw new Error("Google Sheet endpoint ไม่มีสถานีที่พร้อมใช้งาน");
     }
 
-    setStationSource("google-sheet", source.url);
+    setStationSource("google-sheet", source.url, { generatedAtMs });
     store.stations = stations;
     setFirebaseListenerState("stations", "sheet", stations.length);
     refreshCurrentPage();
@@ -3559,12 +3578,13 @@ async function loadStationsFromStaticJson(options = {}) {
     const rawText = await response.text();
     const rows = parseSheetStationSource(rawText, contentType, "ไฟล์ข้อมูล stations");
     const parsedStations = rows.map(mapSheetStationRow).filter(Boolean);
+    const generatedAtMs = getStationSourceGeneratedAtMs(parseStationSourceMetadata(rawText, contentType));
     const stations = markChangedGoogleSheetStations(parsedStations, store.stationSource.type === "static-json" ? store.stations : []);
     if (!stations.length) {
       throw new Error("ไฟล์ข้อมูล stations ไม่มีรายการที่พร้อมใช้งาน");
     }
 
-    setStationSource("static-json", source.url);
+    setStationSource("static-json", source.url, { generatedAtMs });
     store.stations = stations;
     setFirebaseListenerState("stations", "static", stations.length);
     refreshCurrentPage();
@@ -3689,6 +3709,23 @@ function parseSheetStationSource(rawText, contentType, sourceLabel = "แหล�
   return parseCsvRows(text);
 }
 
+function parseStationSourceMetadata(rawText, contentType) {
+  const text = String(rawText || "").trim();
+  if (!text) {
+    return null;
+  }
+
+  if (!(contentType.includes("application/json") || text.startsWith("{") || text.startsWith("["))) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return null;
+  }
+}
+
 function extractSheetStationRows(payload) {
   if (Array.isArray(payload)) {
     return payload;
@@ -3700,6 +3737,25 @@ function extractSheetStationRows(payload) {
     return payload.rows;
   }
   return [];
+}
+
+function getStationSourceGeneratedAtMs(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return 0;
+  }
+
+  const candidates = [payload.generatedAt, payload.generated_at, payload.importedAt, payload.imported_at, payload.updatedAt, payload.updated_at];
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+    const timestamp = timestampToMs(candidate);
+    if (Number.isFinite(timestamp) && timestamp > 0) {
+      return timestamp;
+    }
+  }
+
+  return 0;
 }
 
 function parseCsvRows(text) {
@@ -4198,6 +4254,24 @@ function minutesSince(value) {
 
 function getReportAge(report) {
   return Math.max(0, Math.round((Date.now() - Number(report.updatedAtMs || report.createdAtMs || Date.now())) / 60000));
+}
+
+function getAgeMinutesFromMs(value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.round((Date.now() - value) / 60000));
+}
+
+function getFeedCardAge(report) {
+  if (
+    (report?.source === "static-json" || report?.source === "static_json" || report?.source === "json") &&
+    Number.isFinite(report?.importedAtMs) &&
+    report.importedAtMs > 0
+  ) {
+    return getAgeMinutesFromMs(report.importedAtMs);
+  }
+  return getReportAge(report);
 }
 
 function normalizeStationName(value) {
