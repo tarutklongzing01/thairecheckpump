@@ -988,7 +988,7 @@ function renderHomeMapPopup(station, fuelId) {
         <span class="tiny-badge">${escapeHtml(formatDistance(station.distanceKm))}</span>
       </div>
       <p>${escapeHtml(station.area)} | ${escapeHtml(FUEL_LABELS[fuelId])} ${escapeHtml(meta.label)}</p>
-      <p>อัปเดต ${escapeHtml(formatShortAge(station.updatedMinutes))} | รายงานสะสม ${escapeHtml(String(station.reports))} | พร้อมจ่าย ${available}/${FUELS.length}</p>
+      <p>${escapeHtml(getStationFreshnessText(station))} | รายงานสะสม ${escapeHtml(String(station.reports))} | พร้อมจ่าย ${available}/${FUELS.length}</p>
       <div class="map-popup-actions">
         <a class="button button-primary map-popup-link" href="${escapeHtml(externalMapUrl)}" target="_blank" rel="noopener noreferrer">เปิดใน Google Maps</a>
       </div>
@@ -3075,7 +3075,7 @@ function renderStationCard(station, fuelId) {
           <div class="meta-row muted">
             <span>${escapeHtml(station.area)}</span>
             <span>${formatDistance(station.distanceKm)}</span>
-            <span>อัปเดต ${formatShortAge(station.updatedMinutes)}</span>
+            <span>${escapeHtml(getStationFreshnessText(station, { compact: true }))}</span>
           </div>
         </div>
         <span class="status-badge ${meta.tone}">${escapeHtml(meta.label)}</span>
@@ -4272,6 +4272,22 @@ function getFeedCardAge(report) {
     return getAgeMinutesFromMs(report.importedAtMs);
   }
   return getReportAge(report);
+}
+
+function getStationFreshnessText(station, options = {}) {
+  const { compact = false } = options;
+  const actualAgeText = compact ? formatShortAge(station.updatedMinutes) : formatAge(station.updatedMinutes);
+  if (
+    store.stationSource.type === "static-json" &&
+    Number.isFinite(store.stationSource.generatedAtMs) &&
+    store.stationSource.generatedAtMs > 0
+  ) {
+    const importedAgeText = compact
+      ? formatShortAge(getAgeMinutesFromMs(store.stationSource.generatedAtMs))
+      : formatAge(getAgeMinutesFromMs(store.stationSource.generatedAtMs));
+    return compact ? `นำเข้า ${importedAgeText}` : `นำเข้า ${importedAgeText} | ข้อมูลจริง ${actualAgeText}`;
+  }
+  return `อัปเดต ${actualAgeText}`;
 }
 
 function normalizeStationName(value) {
