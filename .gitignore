@@ -1,0 +1,10 @@
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+.vscode/
+.idea/
+.netlify/
+
+*.url
+เอกสารข้อความใหม่.txt
