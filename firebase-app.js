@@ -31,6 +31,8 @@ import { getDownloadURL, getStorage, ref, uploadBytes } from "https://www.gstati
 
 const FALLBACK_STORAGE_KEY = "thairecheckpump-fallback-reports";
 const DEFAULT_GOOGLE_SHEET_REFRESH_MS = 30000;
+const DEFAULT_NETLIFY_USAGE_ENDPOINT = "/.netlify/functions/netlify-usage";
+const DEFAULT_NETLIFY_USAGE_REFRESH_MS = 300000;
 
 const FUELS = [
   { id: "diesel", label: "ดีเซล" },
@@ -317,6 +319,21 @@ const store = {
     url: "",
     generatedAtMs: 0,
   },
+  netlifyUsage: {
+    status: "idle",
+    label: "-",
+    detail: "ยังไม่ได้ตรวจสอบ Netlify usage",
+    percent: 0,
+    usedMinutes: 0,
+    includedMinutes: 0,
+    buildCount: 0,
+    activeBuilds: 0,
+    queuedBuilds: 0,
+    updatedAt: "",
+    note: "ตรวจสอบ build minutes ของ Netlify ได้จากหน้า admin นี้",
+  },
+  netlifyUsageTimerId: 0,
+  netlifyUsageLoading: false,
   app: null,
   analytics: null,
   auth: null,
@@ -1250,6 +1267,8 @@ function createAdminController() {
     init() {
       renderAdminFuelFields(document.querySelector("[data-admin-fuel-grid]"));
       renderAdminImportProvinceOptions(document.querySelector("[data-admin-import-province]"));
+      ensureAdminNetlifyUsagePolling();
+      refreshAdminNetlifyUsage();
 
       const searchInput = document.querySelector("[data-admin-search]");
       const form = document.querySelector("[data-admin-form]");
@@ -1365,6 +1384,7 @@ function createAdminController() {
       setText("[data-admin-auth]", isGoogleUser() ? "Google" : store.authReady ? "ยังไม่ล็อกอิน" : "รอตรวจสอบ");
       setText("[data-admin-write]", hasAdminAccess() ? "เขียนได้" : "ปิดอยู่");
       renderAdminFirebaseStatus();
+      renderAdminNetlifyUsage();
 
       renderHTML(
         "[data-admin-list]",
@@ -4194,6 +4214,155 @@ function renderAdminFirebaseStatus() {
   setText("[data-admin-summary-note]", health.note);
 }
 
+function ensureAdminNetlifyUsagePolling() {
+  if (store.page !== "admin") {
+    return;
+  }
+  if (store.netlifyUsageTimerId) {
+    return;
+  }
+
+  store.netlifyUsageTimerId = window.setInterval(() => {
+    refreshAdminNetlifyUsage({ background: true });
+  }, DEFAULT_NETLIFY_USAGE_REFRESH_MS);
+}
+
+async function refreshAdminNetlifyUsage(options = {}) {
+  const { background = false } = options;
+  if (store.page !== "admin" || store.netlifyUsageLoading) {
+    return false;
+  }
+
+  store.netlifyUsageLoading = true;
+  if (!background && store.netlifyUsage.status === "idle") {
+    store.netlifyUsage = {
+      ...store.netlifyUsage,
+      status: "loading",
+      label: "กำลังเช็ก",
+      detail: "กำลังดึง usage จาก Netlify",
+    };
+    renderAdminNetlifyUsage();
+  }
+
+  try {
+    const response = await fetch(DEFAULT_NETLIFY_USAGE_ENDPOINT, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = null;
+    }
+
+    if (!response.ok || !payload) {
+      throw new Error(payload?.detail || payload?.message || `Netlify usage endpoint ตอบกลับ ${response.status}`);
+    }
+
+    store.netlifyUsage = normalizeAdminNetlifyUsage(payload);
+  } catch (error) {
+    store.netlifyUsage = {
+      status: "error",
+      label: "เชื่อมไม่ได้",
+      detail: humanizeError(error),
+      percent: 0,
+      usedMinutes: 0,
+      includedMinutes: 0,
+      buildCount: 0,
+      activeBuilds: 0,
+      queuedBuilds: 0,
+      updatedAt: "",
+      note: "หน้า admin ดึง limit ของ Netlify ไม่สำเร็จ ตรวจ token, account id หรือฟังก์ชันบน Netlify อีกครั้ง",
+    };
+  } finally {
+    store.netlifyUsageLoading = false;
+    renderAdminNetlifyUsage();
+  }
+
+  return true;
+}
+
+function normalizeAdminNetlifyUsage(payload) {
+  const state = String(payload?.state || (payload?.ok ? "ok" : "error")).toLowerCase();
+  const rawPercent = Number(payload?.percentUsed || payload?.percent || 0);
+  const percent = Number.isFinite(rawPercent) ? Math.max(0, rawPercent) : 0;
+  const usedMinutes = Number(payload?.currentMinutes || payload?.usedMinutes || 0) || 0;
+  const includedMinutes = Number(payload?.includedMinutes || 0) || 0;
+  const buildCount = Number(payload?.buildCount || 0) || 0;
+  const activeBuilds = Number(payload?.active || payload?.activeBuilds || 0) || 0;
+  const queuedBuilds = Number(payload?.enqueued || payload?.queuedBuilds || 0) || 0;
+  const label =
+    state === "missing-config"
+      ? "ยังไม่ได้เชื่อม"
+      : state === "danger"
+        ? `${Math.round(percent)}% เต็ม`
+        : state === "warning"
+          ? `${Math.round(percent)}% ใช้แล้ว`
+          : includedMinutes > 0
+            ? `${Math.round(percent)}% ใช้แล้ว`
+            : "เช็กได้";
+  const detail =
+    state === "missing-config"
+      ? payload?.detail || "ยังไม่ได้ตั้ง NETLIFY_API_TOKEN และ NETLIFY_ACCOUNT_ID"
+      : includedMinutes > 0
+        ? `${formatAdminNumber(usedMinutes)} / ${formatAdminNumber(includedMinutes)} นาทีในรอบบิลนี้`
+        : payload?.detail || "ยังไม่พบข้อมูล limit จาก Netlify";
+
+  return {
+    status: state,
+    label,
+    detail,
+    percent,
+    usedMinutes,
+    includedMinutes,
+    buildCount,
+    activeBuilds,
+    queuedBuilds,
+    updatedAt: payload?.lastUpdatedAt || payload?.updatedAt || "",
+    note:
+      payload?.periodLabel ||
+      payload?.note ||
+      "ตัวนี้เช็ก build minutes ของ Netlify ไม่ได้วัดข้อมูล Firebase หรือโควตา Firestore",
+  };
+}
+
+function renderAdminNetlifyUsage() {
+  const usage = store.netlifyUsage;
+  setText("[data-admin-netlify-label]", usage.label);
+  setText("[data-admin-netlify-detail]", usage.detail);
+  setText(
+    "[data-admin-netlify-builds]",
+    `Builds ${formatAdminNumber(usage.buildCount)} | Active ${formatAdminNumber(usage.activeBuilds)} | Queue ${formatAdminNumber(usage.queuedBuilds)}`
+  );
+  setText(
+    "[data-admin-netlify-updated]",
+    usage.updatedAt ? `อัปเดต ${formatAdminTimestamp(usage.updatedAt)}` : usage.status === "loading" ? "กำลังตรวจสอบ" : "ยังไม่มีเวลาล่าสุด"
+  );
+  setText("[data-admin-netlify-note]", usage.note);
+
+  const progress = document.querySelector("[data-admin-netlify-progress]");
+  const progressValue = document.querySelector("[data-admin-netlify-progress-value]");
+  if (progress) {
+    const cappedPercent = clamp(Number(usage.percent || 0), 0, 100);
+    progress.style.width = `${cappedPercent}%`;
+    progress.classList.remove("is-warning", "is-danger");
+    if (usage.status === "danger") {
+      progress.classList.add("is-danger");
+    } else if (usage.status === "warning") {
+      progress.classList.add("is-warning");
+    }
+  }
+  if (progressValue) {
+    const rawPercent = Number(usage.percent || 0);
+    progressValue.textContent = Number.isFinite(rawPercent) && rawPercent > 0 ? `${Math.round(rawPercent)}%` : "0%";
+  }
+}
+
 function formatAdminTimestamp(value) {
   if (!value) {
     return "";
@@ -4209,6 +4378,11 @@ function formatAdminTimestamp(value) {
   } catch (error) {
     return "";
   }
+}
+
+function formatAdminNumber(value) {
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? new Intl.NumberFormat("th-TH").format(Math.round(number)) : "0";
 }
 
 function coerceNumber(value) {

@@ -1516,6 +1516,44 @@ input[type="range"] {
   line-height: 1.7;
 }
 
+.admin-netlify-card {
+  grid-column: 1 / -1;
+  min-height: 0;
+  gap: 10px;
+}
+
+.admin-progress-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #52d48d 0%, #ffbb55 70%, #ff7a59 100%);
+  transition: width 220ms ease;
+}
+
+.admin-progress-fill.is-warning {
+  background: linear-gradient(90deg, #ffbb55 0%, #ff9e57 100%);
+}
+
+.admin-progress-fill.is-danger {
+  background: linear-gradient(90deg, #ff7a59 0%, #ff5d73 100%);
+}
+
+.admin-netlify-meta {
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .bar-stack {
   display: grid;
   gap: 12px;
