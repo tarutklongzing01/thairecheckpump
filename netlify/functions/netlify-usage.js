@@ -3,10 +3,10 @@
 const NETLIFY_API_BASE = "https://api.netlify.com/api/v1";
 
 exports.handler = async function handler() {
-  const apiToken = String(process.env.NETLIFY_API_TOKEN || "").trim();
-  const accountId = String(process.env.NETLIFY_ACCOUNT_ID || "").trim();
-  const warnPercent = parseThreshold(process.env.NETLIFY_USAGE_WARN_PERCENT, 75);
-  const dangerPercent = parseThreshold(process.env.NETLIFY_USAGE_DANGER_PERCENT, 90);
+  const apiToken = readEnv("NETLIFY_API_TOKEN");
+  const accountId = readEnv("NETLIFY_ACCOUNT_ID");
+  const warnPercent = parseThreshold(readEnv("NETLIFY_USAGE_WARN_PERCENT"), 75);
+  const dangerPercent = parseThreshold(readEnv("NETLIFY_USAGE_DANGER_PERCENT"), 90);
 
   if (!apiToken || !accountId) {
     return jsonResponse(200, {
@@ -71,6 +71,22 @@ exports.handler = async function handler() {
     });
   }
 };
+
+function readEnv(name) {
+  const processValue =
+    typeof process !== "undefined" && process?.env && Object.prototype.hasOwnProperty.call(process.env, name)
+      ? process.env[name]
+      : undefined;
+  if (typeof processValue === "string" && processValue.trim()) {
+    return processValue.trim();
+  }
+
+  const netlifyValue =
+    typeof Netlify !== "undefined" && Netlify?.env && typeof Netlify.env.get === "function"
+      ? Netlify.env.get(name)
+      : undefined;
+  return typeof netlifyValue === "string" ? netlifyValue.trim() : "";
+}
 
 function jsonResponse(statusCode, payload) {
   return {
