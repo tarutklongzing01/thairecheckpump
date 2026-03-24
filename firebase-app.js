@@ -32,6 +32,8 @@ import { getDownloadURL, getStorage, ref, uploadBytes } from "https://www.gstati
 const FALLBACK_STORAGE_KEY = "thairecheckpump-fallback-reports";
 const DEFAULT_GOOGLE_SHEET_REFRESH_MS = 30000;
 const DEFAULT_NETLIFY_USAGE_ENDPOINT = "/.netlify/functions/netlify-usage";
+const DEFAULT_PUMPRADAR_PROXY_ENDPOINT = "/.netlify/functions/pumpradar-province";
+const PUMPRADAR_PROXY_ENDPOINT_STORAGE_KEY = "thairecheckpump-pumpradar-proxy-endpoint";
 const DEFAULT_NETLIFY_USAGE_REFRESH_MS = 300000;
 
 const FUELS = [
@@ -1280,8 +1282,14 @@ function createAdminController() {
       const reportResetButton = document.querySelector("[data-admin-report-reset]");
       const reportDeleteButton = document.querySelector("[data-admin-report-delete]");
       const importDownloadButton = document.querySelector("[data-admin-import-download]");
+      const importFetchButton = document.querySelector("[data-admin-import-fetch]");
+      const importFetchSubmitButton = document.querySelector("[data-admin-import-fetch-submit]");
       const importButton = document.querySelector("[data-admin-import-submit]");
       const importResetButton = document.querySelector("[data-admin-import-reset]");
+      const importProvinceInput = document.querySelector("[data-admin-import-province]");
+      const importProxyInput = document.querySelector("[data-admin-import-proxy]");
+
+      initializeAdminImportProxyInput(importProxyInput);
 
       searchInput?.addEventListener("input", () => {
         state.search = String(searchInput.value || "").trim().toLowerCase();
@@ -1343,8 +1351,29 @@ function createAdminController() {
         this.render();
       });
 
+      importFetchButton?.addEventListener("click", async () => {
+        await loadPumpRadarProvinceJsonV3();
+        this.render();
+      });
+
+      importFetchSubmitButton?.addEventListener("click", async () => {
+        await importPumpRadarStationsFromProxyV3();
+        this.render();
+      });
+
       importDownloadButton?.addEventListener("click", () => {
         downloadPumpRadarProvinceJsonV3();
+      });
+
+      importProvinceInput?.addEventListener("change", () => {
+        clearAdminImportMessage();
+        syncAdminImportState();
+      });
+
+      importProxyInput?.addEventListener("change", () => {
+        persistPumpRadarProxyEndpoint(importProxyInput.value);
+        clearAdminImportMessage();
+        syncAdminImportState();
       });
 
       importResetButton?.addEventListener("click", () => {
@@ -2176,19 +2205,40 @@ function renderAdminImportProvinceOptions(select) {
   }
 
   const currentValue = normalizeProvinceSlug(select.value) || DEFAULT_IMPORT_PROVINCE_SLUG;
-  const options = PUMPRADAR_PROVINCES.map(
-    (province) => `<option value="${escapeHtml(province.slug)}">${escapeHtml(`${province.label} (${province.slug})`)}</option>`
-  ).join("");
+  const options = [
+    '<option value="all">ทุกจังหวัด (all)</option>',
+    ...PUMPRADAR_PROVINCES.map(
+      (province) => `<option value="${escapeHtml(province.slug)}">${escapeHtml(`${province.label} (${province.slug})`)}</option>`
+    ),
+  ].join("");
 
   select.innerHTML = options;
-  select.value = PUMPRADAR_PROVINCE_SLUGS.includes(currentValue) ? currentValue : DEFAULT_IMPORT_PROVINCE_SLUG;
+  select.value = currentValue === "all" || PUMPRADAR_PROVINCE_SLUGS.includes(currentValue) ? currentValue : DEFAULT_IMPORT_PROVINCE_SLUG;
 }
 
 function syncAdminImportState() {
-  const canWrite = canManageStationsInFirestore();
+  const canImport = canImportStationsToFirestore();
   const submitButton = document.querySelector("[data-admin-import-submit]");
+  const fetchButton = document.querySelector("[data-admin-import-fetch]");
+  const fetchSubmitButton = document.querySelector("[data-admin-import-fetch-submit]");
+  const sourceNote = document.querySelector("[data-admin-import-source-note]");
+  const proxyInput = document.querySelector("[data-admin-import-proxy]");
+  const proxyEndpoint = getPumpRadarProxyEndpoint();
   if (submitButton) {
-    submitButton.disabled = !canWrite;
+    submitButton.disabled = !canImport;
+  }
+  if (fetchButton) {
+    fetchButton.title = `PumpRadar proxy: ${proxyEndpoint}`;
+  }
+  if (fetchSubmitButton) {
+    fetchSubmitButton.disabled = !canImport;
+    fetchSubmitButton.title = `PumpRadar proxy: ${proxyEndpoint}`;
+  }
+  if (proxyInput) {
+    proxyInput.title = `Current proxy endpoint: ${proxyEndpoint}`;
+  }
+  if (sourceNote) {
+    sourceNote.textContent = getAdminImportSourceNote();
   }
 }
 
@@ -2244,6 +2294,10 @@ function readAdminImportProvinceSlugs(options = {}) {
 
 function isAllProvinceSelection(slugs) {
   return slugs.includes("all") || slugs.includes("*");
+}
+
+function getRequestedPumpRadarProvinceSlugs(slugs) {
+  return isAllProvinceSelection(slugs) ? [...PUMPRADAR_PROVINCE_SLUGS] : [...slugs];
 }
 
 function filterProvincePayloadsForImport(provincePayloads, requestedSlugs) {
@@ -2304,11 +2358,294 @@ function describeProvinceImportSelection(selection) {
     return selection.matchedSlugs[0];
   }
 
+  if (selection.matchedSlugs.length > 5) {
+    return `${selection.matchedSlugs.length} provinces`;
+  }
+
   return selection.matchedSlugs.join(", ");
 }
 
 function buildPumpRadarProvinceUrl(slug) {
   return `https://thaipumpradar.com/api/provinces/${encodeURIComponent(slug)}/stations`;
+}
+
+function buildPumpRadarProxyUrl(slug) {
+  try {
+    const url = new URL(getPumpRadarProxyEndpoint(), window.location.href);
+    url.searchParams.set("province", slug);
+    return url.toString();
+  } catch (error) {
+    return `${DEFAULT_PUMPRADAR_PROXY_ENDPOINT}?province=${encodeURIComponent(slug)}`;
+  }
+}
+
+function initializeAdminImportProxyInput(input) {
+  if (!input) {
+    return;
+  }
+
+  const stored = readStoredPumpRadarProxyEndpoint();
+  input.value = stored || DEFAULT_PUMPRADAR_PROXY_ENDPOINT;
+}
+
+function readStoredPumpRadarProxyEndpoint() {
+  try {
+    return String(window.localStorage.getItem(PUMPRADAR_PROXY_ENDPOINT_STORAGE_KEY) || "").trim();
+  } catch (error) {
+    return "";
+  }
+}
+
+function normalizePumpRadarProxyEndpoint(value) {
+  const trimmed = String(value || "").trim();
+  return trimmed || DEFAULT_PUMPRADAR_PROXY_ENDPOINT;
+}
+
+function persistPumpRadarProxyEndpoint(value) {
+  const normalized = normalizePumpRadarProxyEndpoint(value);
+  try {
+    if (normalized === DEFAULT_PUMPRADAR_PROXY_ENDPOINT) {
+      window.localStorage.removeItem(PUMPRADAR_PROXY_ENDPOINT_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(PUMPRADAR_PROXY_ENDPOINT_STORAGE_KEY, normalized);
+    }
+  } catch (error) {
+    return;
+  }
+}
+
+function getPumpRadarProxyEndpoint() {
+  const input = document.querySelector("[data-admin-import-proxy]");
+  if (input) {
+    return normalizePumpRadarProxyEndpoint(input.value);
+  }
+
+  return normalizePumpRadarProxyEndpoint(readStoredPumpRadarProxyEndpoint());
+}
+
+function getPumpRadarProxyUnavailableMessage() {
+  const protocol = String(window.location.protocol || "").toLowerCase();
+  const hostname = String(window.location.hostname || "").toLowerCase();
+  const isLocalHost = protocol === "file:" || hostname === "localhost" || hostname === "127.0.0.1";
+  const proxyEndpoint = getPumpRadarProxyEndpoint();
+  const isDefaultEndpoint = proxyEndpoint === DEFAULT_PUMPRADAR_PROXY_ENDPOINT;
+
+  if (isLocalHost && isDefaultEndpoint) {
+    return 'PumpRadar proxy is unavailable here because this page is not running through Netlify Functions. Run "netlify dev", open the deployed Netlify URL, or paste the deployed function URL into "PumpRadar Proxy URL".';
+  }
+
+  if (isDefaultEndpoint) {
+    return "PumpRadar proxy returned 404 because this site has not deployed the new Netlify function yet. Push the latest code and wait for Netlify to redeploy.";
+  }
+
+  return `PumpRadar proxy returned 404 at ${proxyEndpoint}. Check that this URL points to a deployed Netlify function.`;
+}
+
+function canImportStationsToFirestore() {
+  return hasAdminAccess() && store.mode === "firebase" && Boolean(store.db);
+}
+
+function assertCanImportStationsToFirestore() {
+  if (store.mode !== "firebase" || !store.db) {
+    throw new Error("Firestore is not connected in this mode.");
+  }
+  if (!hasAdminAccess()) {
+    throw new Error("Please sign in with a Google account that has admin access before importing.");
+  }
+}
+
+function getAdminImportSourceNote() {
+  if (store.stationSource.type === "firestore") {
+    return "ดึงและนำเข้าข้อมูล PumpRadar ได้ตรงจากมือถือหรือคอม ระบบจะบันทึกลง Firestore ทันที";
+  }
+
+  return `ดึงและนำเข้าได้จากมือถือหรือคอม แต่หน้า public ยังใช้ ${getStationSourceLabel()} อยู่ การนำเข้าจะบันทึกลง Firestore ก่อน และหน้า public จะยังไม่เปลี่ยนจนกว่าจะ publish ใหม่หรือสลับ source`;
+}
+
+function getAdminImportSourceSuccessNote() {
+  if (store.stationSource.type === "firestore") {
+    return "";
+  }
+
+  return ` Saved to Firestore only. Public pages still use ${getStationSourceLabel()}.`;
+}
+
+function buildPumpRadarStationEntriesFromSelection(selection) {
+  const stationMap = new Map();
+
+  selection.payloads.forEach((payload) => {
+    payload.stations
+      .map((station) => buildPumpRadarStationEntry(station, payload.province))
+      .filter(Boolean)
+      .forEach((entry) => {
+        stationMap.set(entry.id, entry);
+      });
+  });
+
+  return [...stationMap.values()];
+}
+
+function preparePumpRadarImport(selectionPayloads, requestedSlugs) {
+  const selection = filterProvincePayloadsForImport(selectionPayloads, requestedSlugs);
+  const stationEntries = buildPumpRadarStationEntriesFromSelection(selection);
+  return { selection, stationEntries };
+}
+
+function createPumpRadarEditorPayload(payloads, failures = []) {
+  if (payloads.length === 1 && !failures.length) {
+    return payloads[0];
+  }
+
+  return {
+    source: "PumpRadar",
+    generatedAt: new Date().toISOString(),
+    provinceCount: payloads.length,
+    provinces: payloads,
+    failures,
+  };
+}
+
+async function fetchPumpRadarProvincePayloadViaProxy(slug) {
+  const protocol = String(window.location.protocol || "").toLowerCase();
+  if (protocol === "file:" && getPumpRadarProxyEndpoint() === DEFAULT_PUMPRADAR_PROXY_ENDPOINT) {
+    throw new Error(getPumpRadarProxyUnavailableMessage());
+  }
+
+  const response = await fetch(buildPumpRadarProxyUrl(slug), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (response.status === 404) {
+    throw new Error(getPumpRadarProxyUnavailableMessage());
+  }
+
+  const payload = await safeJson(response);
+  if (!response.ok || !payload?.ok) {
+    throw new Error(payload?.detail || `PumpRadar proxy responded with ${response.status}`);
+  }
+
+  return normalizePumpRadarProvincePayloadV3(payload);
+}
+
+async function fetchPumpRadarProvincePayloadsViaProxy(slugs, options = {}) {
+  const { onProgress } = options;
+  const requestedSlugs = getRequestedPumpRadarProvinceSlugs(slugs);
+  const payloads = [];
+  const failures = [];
+
+  for (let index = 0; index < requestedSlugs.length; index += 1) {
+    const slug = requestedSlugs[index];
+    onProgress?.({
+      current: index + 1,
+      total: requestedSlugs.length,
+      slug,
+    });
+
+    try {
+      const payload = await fetchPumpRadarProvincePayloadViaProxy(slug);
+      payloads.push(payload);
+    } catch (error) {
+      failures.push({
+        provinceSlug: slug,
+        error: humanizeError(error),
+      });
+    }
+  }
+
+  if (!payloads.length) {
+    const detail = failures[0]?.error || "Could not fetch any PumpRadar province payloads.";
+    throw new Error(detail);
+  }
+
+  return {
+    payloads,
+    failures,
+    requestedSlugs,
+  };
+}
+
+async function loadPumpRadarProvinceJsonV3() {
+  const messageBox = document.querySelector("[data-admin-import-message]");
+
+  try {
+    const requestedSlugs = readAdminImportProvinceSlugs({ required: true });
+    if (isAllProvinceSelection(requestedSlugs)) {
+      throw new Error("เลือกจังหวัดเดียวถ้าต้องการดึงมาใส่กล่อง JSON ถ้าจะอัปเดตทุกจังหวัดให้ใช้ปุ่ม ดึงแล้วนำเข้า");
+    }
+
+    setMessage(messageBox, `Fetching PumpRadar JSON for ${requestedSlugs[0]}...`);
+    const result = await fetchPumpRadarProvincePayloadsViaProxy(requestedSlugs, {
+      onProgress: ({ current, total, slug }) => {
+        setMessage(messageBox, `Fetching PumpRadar JSON ${current}/${total}: ${slug}...`);
+      },
+    });
+
+    const fileInput = document.querySelector("[data-admin-import-file]");
+    const textArea = document.querySelector("[data-admin-import-json]");
+    if (fileInput) {
+      fileInput.value = "";
+    }
+    if (textArea) {
+      textArea.value = JSON.stringify(createPumpRadarEditorPayload(result.payloads, result.failures), null, 2);
+    }
+
+    const failureNote = result.failures.length
+      ? ` Failed provinces: ${result.failures.map((item) => item.provinceSlug).join(", ")}.`
+      : "";
+    setMessage(messageBox, `Loaded PumpRadar JSON for ${requestedSlugs[0]} into the editor.${failureNote}`);
+  } catch (error) {
+    console.error(error);
+    setMessage(messageBox, humanizeError(error));
+  }
+}
+
+async function importPumpRadarStationsFromProxyV3() {
+  const messageBox = document.querySelector("[data-admin-import-message]");
+  setMessage(messageBox, "Fetching PumpRadar payloads via Netlify proxy...");
+
+  try {
+    assertCanImportStationsToFirestore();
+
+    const requestedSlugs = readAdminImportProvinceSlugs({ required: true });
+    const result = await fetchPumpRadarProvincePayloadsViaProxy(requestedSlugs, {
+      onProgress: ({ current, total, slug }) => {
+        setMessage(messageBox, `Fetching PumpRadar JSON ${current}/${total}: ${slug}...`);
+      },
+    });
+
+    const { selection, stationEntries } = preparePumpRadarImport(result.payloads, requestedSlugs);
+    if (!stationEntries.length) {
+      throw new Error("No stations were found in the fetched PumpRadar payloads.");
+    }
+
+    const selectionLabel = describeProvinceImportSelection(selection);
+    setMessage(messageBox, `Importing ${stationEntries.length} stations from ${selectionLabel}...`);
+    await writeDocsInBatches(appSettings.collections.stations, stationEntries);
+
+    const failureNote = result.failures.length
+      ? ` Failed provinces: ${result.failures.map((item) => item.provinceSlug).join(", ")}.`
+      : "";
+    setMessage(
+      messageBox,
+      `Imported ${stationEntries.length} stations from ${selection.payloads.length} province payloads (${selectionLabel}) via Netlify proxy.${failureNote}${getAdminImportSourceSuccessNote()}`
+    );
+  } catch (error) {
+    console.error(error);
+    maybeTrackFirebaseError("admin-import-proxy", error);
+    setMessage(messageBox, humanizeError(error));
+  }
+}
+
+async function safeJson(response) {
+  try {
+    return await response.json();
+  } catch (error) {
+    return null;
+  }
 }
 
 function downloadPumpRadarProvinceJson() {
@@ -4546,32 +4883,12 @@ async function importPumpRadarStationsV3() {
   setMessage(messageBox, "Validating PumpRadar payload...");
 
   try {
-    if (store.stationSource.type !== "firestore") {
-      throw new Error(`หน้าเว็บตั้งให้ใช้ ${getStationSourceLabel()} เป็นแหล่งข้อมูลสถานีอยู่ ให้ export ข้อมูลชุดใหม่แล้ว publish แทน`);
-    }
-    if (store.mode !== "firebase" || !store.db) {
-      throw new Error("Firestore is not connected in this mode.");
-    }
-    if (!hasAdminAccess()) {
-      throw new Error("Please sign in with a Google account that has admin access before importing.");
-    }
+    assertCanImportStationsToFirestore();
 
     const raw = await readAdminImportText();
     const provincePayloads = parsePumpRadarPayloadV3(raw);
     const requestedSlugs = readAdminImportProvinceSlugs();
-    const selection = filterProvincePayloadsForImport(provincePayloads, requestedSlugs);
-    const stationMap = new Map();
-
-    selection.payloads.forEach((payload) => {
-      payload.stations
-        .map((station) => buildPumpRadarStationEntry(station, payload.province))
-        .filter(Boolean)
-        .forEach((entry) => {
-          stationMap.set(entry.id, entry);
-        });
-    });
-
-    const stationEntries = [...stationMap.values()];
+    const { selection, stationEntries } = preparePumpRadarImport(provincePayloads, requestedSlugs);
 
     if (!stationEntries.length) {
       throw new Error("No stations were found in this PumpRadar JSON payload.");
@@ -4580,7 +4897,10 @@ async function importPumpRadarStationsV3() {
     const selectionLabel = describeProvinceImportSelection(selection);
     setMessage(messageBox, `Importing ${stationEntries.length} stations from ${selectionLabel}...`);
     await writeDocsInBatches(appSettings.collections.stations, stationEntries);
-    setMessage(messageBox, `Imported ${stationEntries.length} stations from ${selection.payloads.length} province payloads (${selectionLabel}).`);
+    setMessage(
+      messageBox,
+      `Imported ${stationEntries.length} stations from ${selection.payloads.length} province payloads (${selectionLabel}).${getAdminImportSourceSuccessNote()}`
+    );
   } catch (error) {
     console.error(error);
     maybeTrackFirebaseError("admin-import", error);
@@ -4642,7 +4962,7 @@ function downloadPumpRadarProvinceJsonV3() {
         slugs[0] === "all" || slugs[0] === "*"
           ? "powershell -ExecutionPolicy Bypass -File .\\tools\\fetch-pumpradar-provinces.ps1 -All"
           : `powershell -ExecutionPolicy Bypass -File .\\tools\\fetch-pumpradar-provinces.ps1 -Province ${slugs.join(",")}`;
-      setMessage(messageBox, `Use this command in PowerShell: ${target}`);
+      setMessage(messageBox, `Use this command in PowerShell: ${target} | On mobile, use the button "ดึงแล้วนำเข้า" instead.`);
       return;
     }
 

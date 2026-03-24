@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Admin | Thairecheckpump</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260323-2" />
-    <script type="module" src="firebase-app.js?v=20260323-2"></script>
+    <link rel="stylesheet" href="styles.css?v=20260324-2" />
+    <script type="module" src="firebase-app.js?v=20260324-2"></script>
   </head>
   <body data-page="admin">
     <div class="site-shell">
@@ -116,10 +116,45 @@
           </div>
         </section>
 
-        <div data-admin-content>
-        <section class="section">
+        <div data-admin-content class="admin-page-shell">
+        <section class="section admin-quick-section">
           <div class="container">
-            <section class="panel section-reveal delay-1">
+            <section class="panel section-reveal delay-1 admin-command-panel">
+              <div class="admin-command-head">
+                <div>
+                  <span class="eyebrow">Workflow</span>
+                  <h2>ทางลัดสำหรับงานหลังบ้าน</h2>
+                  <p>ดูสถานะด้านบนก่อน จากนั้นนำเข้าข้อมูล ค้นหารายการฝั่งซ้าย แล้วค่อยแก้ไขและบันทึกจากฟอร์มฝั่งขวา</p>
+                </div>
+                <div class="admin-command-links">
+                  <a class="button button-outline" href="#admin-import">Import</a>
+                  <a class="button button-outline" href="#admin-stations">Stations</a>
+                  <a class="button button-outline" href="#admin-reports">Reports</a>
+                </div>
+              </div>
+              <div class="admin-guide-grid">
+                <article class="admin-guide-card">
+                  <span class="tiny-badge">1. Access</span>
+                  <h3>ตรวจสิทธิ์ก่อนแก้</h3>
+                  <p>เช็กโหมด, สิทธิ์เขียน, และ Firebase health ด้านบนก่อนเริ่มแก้ข้อมูลจริงทุกครั้ง</p>
+                </article>
+                <article class="admin-guide-card">
+                  <span class="tiny-badge">2. Import</span>
+                  <h3>มือถือก็ดึงได้</h3>
+                  <p>ถ้าไม่มีไฟล์ JSON ในเครื่องให้ใช้ปุ่มดึงตรงหรือดึงแล้วนำเข้าได้ทันทีจากหน้าหลังบ้าน</p>
+                </article>
+                <article class="admin-guide-card">
+                  <span class="tiny-badge">3. Review</span>
+                  <h3>คิวซ้าย ฟอร์มขวา</h3>
+                  <p>รายการค้นหาอยู่ฝั่งซ้าย ส่วนรายละเอียดและปุ่มบันทึกถูกเก็บไว้ฝั่งขวาเพื่อลดการสับสนเวลาใช้งาน</p>
+                </article>
+              </div>
+            </section>
+          </div>
+        </section>
+        <section class="section" id="admin-import">
+          <div class="container">
+            <section class="panel section-reveal delay-1 admin-panel-elevated">
               <div class="section-header">
                 <div>
                   <span class="eyebrow">Import</span>
@@ -129,6 +164,24 @@
                     เป็น Document ID ระบบจะสร้าง `fuelStates`, `reportCount`, `updatedAt` และ metadata พื้นฐานให้พร้อมใช้งานกับหน้าแผนที่ทันที
                   </p>
                 </div>
+              </div>
+
+              <div class="admin-guide-grid admin-guide-grid-compact">
+                <article class="admin-guide-card admin-guide-card-soft">
+                  <span class="brand-badge">Mobile</span>
+                  <h3>ดึงแล้วนำเข้า</h3>
+                  <p>เหมาะกับการอัปเดตจากมือถือหรือเวลาที่ไม่มีไฟล์ JSON อยู่ในเครื่อง</p>
+                </article>
+                <article class="admin-guide-card admin-guide-card-soft">
+                  <span class="brand-badge">JSON</span>
+                  <h3>วางหรืออัปโหลดก่อน</h3>
+                  <p>เหมาะเวลาต้องการตรวจ payload ก่อน import หรือมีไฟล์รวมหลายจังหวัดอยู่แล้ว</p>
+                </article>
+                <article class="admin-guide-card admin-guide-card-soft">
+                  <span class="brand-badge">Source</span>
+                  <h3>เช็กผลลัพธ์หน้า public</h3>
+                  <p>ถ้า public ยังใช้ Static JSON อยู่ การ import รอบนี้จะอัปเดตใน Firestore ก่อน</p>
+                </article>
               </div>
 
               <div class="form-grid admin-import-grid">
@@ -142,9 +195,23 @@
                   <span>ดาวน์โหลด JSON</span>
                   <div class="admin-actions">
                     <button class="button button-outline" type="button" data-admin-import-download>ดาวน์โหลด JSON จังหวัดนี้</button>
+                    <button class="button button-outline" type="button" data-admin-import-fetch>ดึง JSON ตรง</button>
+                    <button class="button button-primary" type="button" data-admin-import-fetch-submit>ดึงแล้วนำเข้า</button>
                   </div>
                   <small class="muted">ปุ่มนี้จะเปิด API ของ PumpRadar ในแท็บใหม่ แล้วค่อยบันทึกไฟล์เป็น `.json`</small>
+                  <small class="muted">ปุ่มดึงตรงและดึงแล้วนำเข้าใช้ได้ทั้งมือถือและคอมผ่าน Netlify function ของเว็บ ถ้าขึ้น 404 แปลว่ายังไม่ได้ deploy ฟังก์ชันขึ้น Netlify หรือไม่ได้เปิดผ่าน netlify dev</small>
                 </div>
+
+                <label class="field field-full">
+                  <span>PumpRadar Proxy URL</span>
+                  <input
+                    class="input"
+                    type="text"
+                    placeholder="https://your-site.netlify.app/.netlify/functions/pumpradar-province"
+                    data-admin-import-proxy
+                  />
+                  <small class="muted">ปล่อยว่างไว้เพื่อใช้ <code>/.netlify/functions/pumpradar-province</code> ของเว็บนี้ ถ้าเปิด admin จาก localhost, file:// หรือโดเมนอื่น ให้ใส่ URL ของ Netlify function ที่ deploy แล้ว</small>
+                </label>
 
                 <label class="field field-full">
                   <span>ไฟล์ JSON</span>
@@ -162,11 +229,12 @@
                   ></textarea>
                 </label>
 
-                <div class="field field-full">
+                <div class="field field-full admin-form-toolbar">
                   <div class="admin-actions">
                     <button class="button button-primary" type="button" data-admin-import-submit>Import Stations</button>
                     <button class="button button-outline" type="button" data-admin-import-reset>ล้างข้อมูล</button>
                   </div>
+                  <small class="muted" data-admin-import-source-note>กำลังตรวจสอบ source ของสถานี</small>
                 </div>
 
                 <div class="message-box field-full" aria-live="polite" data-admin-import-message></div>
@@ -175,7 +243,7 @@
           </div>
         </section>
 
-        <section class="section">
+        <section class="section" id="admin-stations">
           <div class="container admin-layout">
             <aside class="panel section-reveal delay-2 admin-sidebar">
               <div class="section-header">
@@ -183,6 +251,10 @@
                   <span class="eyebrow">Stations</span>
                   <h2>เลือกรายการที่ต้องการแก้ไข</h2>
                 </div>
+              </div>
+              <div class="admin-side-note">
+                <span class="tiny-badge">Station Queue</span>
+                <p>ค้นหาจากชื่อ แบรนด์ พื้นที่ หรือ Document ID แล้วเลือกจากคิวด้านล่างเพื่อโหลดฟอร์มแก้ไข</p>
               </div>
               <label class="field field-full">
                 <span>ค้นหาจากชื่อปั๊ม แบรนด์ พื้นที่ หรือ Document ID</span>
@@ -194,13 +266,18 @@
               <div class="admin-station-list" data-admin-list></div>
             </aside>
 
-            <section class="panel section-reveal delay-3">
+            <section class="panel section-reveal delay-3 admin-panel-elevated">
               <div class="section-header">
                 <div>
                   <span class="eyebrow">Editor</span>
                   <h2 data-admin-form-title>เลือกสถานีเพื่อแก้ไข</h2>
                   <p data-admin-form-hint>เลือกสถานีจากรายการด้านซ้าย หรือกดสร้างสถานีใหม่</p>
                 </div>
+              </div>
+
+              <div class="admin-form-intro">
+                <span class="tiny-badge">Station Editor</span>
+                <p>รวมข้อมูลหลักของสถานี พิกัด รูป และสถานะเชื้อเพลิงไว้ในแผงเดียวเพื่อให้ตัดสินใจและบันทึกได้เร็วขึ้น</p>
               </div>
 
               <form class="form-grid admin-form" data-admin-form>
@@ -251,7 +328,7 @@
                   <div class="admin-fuel-grid" data-admin-fuel-grid></div>
                 </div>
 
-                <div class="field field-full">
+                <div class="field field-full admin-form-toolbar">
                   <div class="admin-actions">
                     <button class="button button-primary" type="submit" data-admin-save>บันทึกสถานี</button>
                     <button class="button button-outline" type="button" data-admin-reset>รีเซ็ต</button>
@@ -265,7 +342,7 @@
           </div>
         </section>
 
-        <section class="section">
+        <section class="section" id="admin-reports">
           <div class="container admin-layout">
             <aside class="panel section-reveal delay-2 admin-sidebar">
               <div class="section-header">
@@ -274,6 +351,10 @@
                   <h2>จัดการรายงานที่ผู้ใช้ส่งมา</h2>
                 </div>
               </div>
+              <div class="admin-side-note">
+                <span class="tiny-badge">Report Queue</span>
+                <p>ใช้คิวนี้สำหรับตรวจรายงานผิดพลาด เปลี่ยนสถานะ หรือย้ายรายงานไปยังสถานีที่ถูกต้องจากหน้าเดียว</p>
+              </div>
               <label class="field field-full">
                 <span>ค้นหาจากชื่อปั๊ม ผู้รายงาน แบรนด์ หรือ Report ID</span>
                 <input class="input" type="search" placeholder="เช่น พัทยาใต้ หรือ NdfKzpJP" data-admin-report-search />
@@ -281,13 +362,18 @@
               <div class="admin-report-list" data-admin-report-list></div>
             </aside>
 
-            <section class="panel section-reveal delay-3">
+            <section class="panel section-reveal delay-3 admin-panel-elevated">
               <div class="section-header">
                 <div>
                   <span class="eyebrow">Report Editor</span>
                   <h2 data-admin-report-title>เลือกรายงานเพื่อแก้ไข</h2>
                   <p data-admin-report-hint>เลือกรายงานจากรายการด้านซ้าย ระบบจะบันทึกกลับไปยัง Firestore และ sync สรุปของสถานีให้</p>
                 </div>
+              </div>
+
+              <div class="admin-form-intro">
+                <span class="tiny-badge">Report Editor</span>
+                <p>แก้ชื่อสถานี ผู้รายงาน สถานะน้ำมัน พิกัด และรูปได้จากตรงนี้ แล้วระบบจะ sync ภาพรวมของสถานีให้อีกชั้น</p>
               </div>
 
               <form class="form-grid admin-form" data-admin-report-form>
@@ -372,7 +458,7 @@
                   <textarea name="note" placeholder="รายละเอียดเพิ่มเติมของรายงาน" data-admin-report-note></textarea>
                 </label>
 
-                <div class="field field-full">
+                <div class="field field-full admin-form-toolbar">
                   <div class="admin-actions">
                     <button class="button button-primary" type="submit" data-admin-report-save>บันทึกรายงาน</button>
                     <button class="button button-outline" type="button" data-admin-report-reset>รีเซ็ต</button>
