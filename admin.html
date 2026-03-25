@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Admin | Thairecheckpump</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260324-2" />
-    <script type="module" src="firebase-app.js?v=20260324-2"></script>
+    <link rel="stylesheet" href="styles.css?v=20260325-1" />
+    <script type="module" src="firebase-app.js?v=20260325-1"></script>
   </head>
   <body data-page="admin">
     <div class="site-shell">
@@ -86,21 +86,21 @@
                   <small data-admin-last-error-detail>ยังไม่พบข้อผิดพลาดล่าสุด</small>
                 </div>
                 <div class="stat-card admin-stat-card admin-netlify-card">
-                  <span>Netlify Build Usage</span>
+                  <span>Vercel Usage</span>
                   <strong data-admin-netlify-label>-</strong>
-                  <small data-admin-netlify-detail>กำลังตรวจสอบ build minutes ของ Netlify</small>
+                  <small data-admin-netlify-detail>กำลังตรวจสอบ usage และ cost ของ Vercel</small>
                   <div class="admin-progress-track" aria-hidden="true">
                     <div class="admin-progress-fill" data-admin-netlify-progress></div>
                   </div>
                   <div class="detail-row muted admin-netlify-meta">
-                    <span data-admin-netlify-builds>Builds -</span>
-                    <span data-admin-netlify-progress-value>0%</span>
+                    <span data-admin-netlify-builds>Charges -</span>
+                    <span data-admin-netlify-progress-value>-</span>
                   </div>
                   <small data-admin-netlify-updated>ยังไม่มีเวลาล่าสุด</small>
                 </div>
               </div>
               <p class="admin-summary-note" data-admin-summary-note>ต้องเชื่อม Firestore และมี auth ก่อนบันทึกการแก้ไขข้อมูล</p>
-              <p class="admin-summary-note" data-admin-netlify-note>ตัวนี้ไว้ดู build minutes ของ Netlify เพื่อกัน deploy จนชน limit โดยไม่รู้ตัว</p>
+              <p class="admin-summary-note" data-admin-netlify-note>ตัวนี้ไว้ดู usage และ cost ของ Vercel จากฝั่งแอดมิน</p>
             </div>
           </div>
         </section>
@@ -199,7 +199,7 @@
                     <button class="button button-primary" type="button" data-admin-import-fetch-submit>ดึงแล้วนำเข้า</button>
                   </div>
                   <small class="muted">ปุ่มนี้จะเปิด API ของ PumpRadar ในแท็บใหม่ แล้วค่อยบันทึกไฟล์เป็น `.json`</small>
-                  <small class="muted">ปุ่มดึงตรงและดึงแล้วนำเข้าใช้ได้ทั้งมือถือและคอมผ่าน Netlify function ของเว็บ ถ้าขึ้น 404 แปลว่ายังไม่ได้ deploy ฟังก์ชันขึ้น Netlify หรือไม่ได้เปิดผ่าน netlify dev</small>
+                  <small class="muted">ปุ่มดึงตรงและดึงแล้วนำเข้าใช้ได้ทั้งมือถือและคอมผ่าน backend function ของเว็บ ถ้าขึ้น 404 แปลว่ายังไม่ได้ deploy ฟังก์ชันขึ้น Vercel หรือไม่ได้เปิดผ่าน vercel dev</small>
                 </div>
 
                 <label class="field field-full">
@@ -207,10 +207,10 @@
                   <input
                     class="input"
                     type="text"
-                    placeholder="https://your-site.netlify.app/.netlify/functions/pumpradar-province"
+                    placeholder="https://your-site.com/api/pumpradar-province"
                     data-admin-import-proxy
                   />
-                  <small class="muted">ปล่อยว่างไว้เพื่อใช้ <code>/.netlify/functions/pumpradar-province</code> ของเว็บนี้ ถ้าเปิด admin จาก localhost, file:// หรือโดเมนอื่น ให้ใส่ URL ของ Netlify function ที่ deploy แล้ว</small>
+                  <small class="muted">ปล่อยว่างไว้เพื่อใช้ endpoint มาตรฐานของเว็บนี้ ถ้าเปิด admin จาก localhost, file:// หรือโดเมนอื่น ให้ใส่ URL ของ backend function ที่ deploy แล้ว</small>
                 </label>
 
                 <label class="field field-full">
