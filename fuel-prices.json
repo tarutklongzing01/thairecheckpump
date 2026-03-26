@@ -2,35 +2,75 @@
   "ok": true,
   "source": "manual-json",
   "updatedAt": "2026-03-26T00:00:00+07:00",
-  "effectiveAt": "2026-03-26T00:00:00+07:00",
+  "effectiveAt": "26 มีนาคม 2569",
   "currency": "THB",
   "unit": "บาท/ลิตร",
-  "note": "อัปเดตราคาจริงในไฟล์ fuel-prices.json เพื่อให้หน้า index แสดงราคาน้ำมันล่าสุด",
+  "defaultBrand": "ptt",
+  "note": "ไฟล์สำรองราคาน้ำมันอ้างอิงจาก Kapook | ราคา ณ 26 มีนาคม 2569",
+  "brands": [
+    {
+      "id": "ptt",
+      "label": "PTT",
+      "logoUrl": "https://gasprice.kapook.com/upload/logo/Logo-1-7378.jpg",
+      "items": [
+        {
+          "id": "diesel",
+          "label": "ดีเซล B7",
+          "price": 29.94
+        },
+        {
+          "id": "gas91",
+          "label": "แก๊สโซฮอล์ 91",
+          "price": 40.68
+        },
+        {
+          "id": "gas95",
+          "label": "แก๊สโซฮอล์ 95",
+          "price": 41.05
+        },
+        {
+          "id": "e20",
+          "label": "E20",
+          "price": 36.05
+        },
+        {
+          "id": "e85",
+          "label": "E85",
+          "price": 32.79
+        },
+        {
+          "id": "lpg",
+          "label": "LPG",
+          "price": null
+        }
+      ]
+    }
+  ],
   "items": [
     {
       "id": "diesel",
-      "label": "ดีเซล",
-      "price": null
+      "label": "ดีเซล B7",
+      "price": 29.94
     },
     {
       "id": "gas91",
       "label": "แก๊สโซฮอล์ 91",
-      "price": null
+      "price": 40.68
     },
     {
       "id": "gas95",
       "label": "แก๊สโซฮอล์ 95",
-      "price": null
+      "price": 41.05
     },
     {
       "id": "e20",
       "label": "E20",
-      "price": null
+      "price": 36.05
     },
     {
       "id": "e85",
       "label": "E85",
-      "price": null
+      "price": 32.79
     },
     {
       "id": "lpg",

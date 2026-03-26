@@ -18,6 +18,7 @@ const DEPLOY_BUNDLE_FILES = [
   { path: "api/fuel-prices.js", label: "Fuel price API" },
   { path: "firebase-app.js", label: "Home app loader" },
   { path: "firebase-config.js", label: "Runtime config" },
+  { path: "fuel-prices.json", label: "Fuel price fallback data" },
   { path: "index.html", label: "Homepage entry" },
   { path: "github-upload.html", label: "Uploader page" },
   { path: "github-upload.js", label: "Uploader logic" },

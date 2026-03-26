@@ -946,6 +946,10 @@ textarea:disabled {
   box-shadow: 0 16px 24px rgba(0, 0, 0, 0.24);
 }
 
+.fuel-brand-badge-logo.has-image {
+  background: rgba(255, 255, 255, 0.98);
+}
+
 .fuel-brand-badge-logo::before {
   content: "";
   position: absolute;
@@ -964,6 +968,19 @@ textarea:disabled {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.2);
   transform: rotate(-20deg);
+}
+
+.fuel-brand-badge-logo.has-image::before,
+.fuel-brand-badge-logo.has-image::after {
+  display: none;
+}
+
+.fuel-brand-badge-logo img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
 }
 
 .fuel-brand-badge-mark {

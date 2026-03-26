@@ -1054,14 +1054,29 @@ function renderHomeFuelPriceBrandBadge(brandState) {
 
   return `
     <div class="fuel-brand-badge fuel-brand-badge--${escapeHtml(visual.className)}">
-      <span class="fuel-brand-badge-logo" aria-hidden="true">
-        <span class="fuel-brand-badge-mark">${escapeHtml(visual.mark)}</span>
-      </span>
+      ${renderFuelPriceBrandLogo(brand, visual)}
       <span class="fuel-brand-badge-copy">
         <small>Fuel Brand</small>
         <strong>${escapeHtml(brand.label || visual.label)}</strong>
       </span>
     </div>
+  `;
+}
+
+function renderFuelPriceBrandLogo(brand, visual) {
+  const logoUrl = String(brand?.logoUrl || "").trim();
+  if (logoUrl) {
+    return `
+      <span class="fuel-brand-badge-logo has-image">
+        <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(brand.label || visual.label)}" loading="lazy" referrerpolicy="no-referrer" />
+      </span>
+    `;
+  }
+
+  return `
+    <span class="fuel-brand-badge-logo" aria-hidden="true">
+      <span class="fuel-brand-badge-mark">${escapeHtml(visual.mark)}</span>
+    </span>
   `;
 }
 
@@ -4347,6 +4362,7 @@ function normalizeFuelPriceBrand(brand) {
   return {
     id: normalizedId,
     label: normalizeBrandLabel(FUEL_PRICE_BRAND_LABELS[normalizedId] || fallbackLabel),
+    logoUrl: String(brand?.logoUrl || brand?.logo || brand?.image || "").trim(),
     items,
   };
 }
