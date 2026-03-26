@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/.netlify/functions/pumpradar-province",
+      "destination": "/api/pumpradar-province"
+    }
+  ]
+}

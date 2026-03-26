@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GitHub Upload | Thairecheckpump</title>
+    <meta
+      name="description"
+      content="อัปโหลด stations-for-google-sheet.csv และ stations-public.json ขึ้น GitHub จากหน้าเดียว"
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css?v=20260326-1" />
+    <script type="module" src="github-upload.js?v=20260326-1"></script>
+  </head>
+  <body data-page="github-upload">
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="container topbar">
+          <a class="brand" href="index.html">
+            <span class="brand-mark"></span>
+            <span class="brand-copy">
+              <strong>Thairecheckpump</strong>
+              <small>GitHub uploader สำหรับไฟล์ export</small>
+            </span>
+          </a>
+          <nav class="nav-list" aria-label="เมนูหลัก">
+            <a class="nav-link" href="index.html">แผนที่</a>
+            <a class="nav-link" href="feed.html">ฟีด</a>
+            <a class="nav-link" href="report.html">รายงาน</a>
+            <a class="nav-link" href="gallery.html">คลังภาพ</a>
+            <a class="nav-link" href="dashboard.html">ข้อมูล</a>
+            <a class="nav-link" href="admin.html">Admin</a>
+          </nav>
+          <div class="topbar-actions">
+            <a class="button button-ghost" href="admin.html">กลับหน้า Admin</a>
+            <a class="button button-outline" href="#github-upload-form">เริ่มอัปโหลด</a>
+          </div>
+        </div>
+        <div class="container">
+          <div class="statusbar">
+            <div class="status-cluster">
+              <span class="tiny-badge">GitHub Sync</span>
+              <span class="tiny-badge" data-upload-summary-repo>Repo: tarutklongzing01/thairecheckpump</span>
+              <span class="tiny-badge" data-upload-summary-branch>Branch: main</span>
+            </div>
+            <div class="status-cluster">
+              <span class="muted">Token จะใช้ใน browser session นี้เท่านั้น และจะไม่ถูกบันทึกลง localStorage</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="page-hero">
+          <div class="container page-hero-grid github-upload-hero-grid">
+            <section class="panel section-reveal github-upload-hero-panel">
+              <div class="github-upload-hero-head">
+                <span class="eyebrow">GitHub Sync</span>
+                <span class="tiny-badge">2-file commit flow</span>
+              </div>
+              <h1 class="subheadline">อัปเดตไฟล์ export 2 ชุดขึ้น GitHub จากหน้าเดียว</h1>
+              <p class="lede">
+                หน้านี้ออกแบบให้ push ไฟล์ <code>stations-for-google-sheet.csv</code> และ
+                <code>stations-public.json</code> เข้าสู่ repo ได้ทันทีผ่าน GitHub API โดยไม่ต้องเปิด git command เอง
+              </p>
+              <div class="page-hero-actions">
+                <a class="button button-primary" href="#github-upload-form">ตั้งค่าแล้วอัปโหลด</a>
+                <a class="button button-outline" href="admin.html">กลับไปหน้า Admin</a>
+              </div>
+            </section>
+
+            <aside class="panel section-reveal delay-1 github-upload-summary-panel">
+              <div class="admin-sidebar-head admin-sidebar-head-tight">
+                <div>
+                  <span class="eyebrow">Flow</span>
+                  <h2>สิ่งที่หน้านี้ทำให้</h2>
+                </div>
+                <p>อ่านไฟล์จากเครื่องหรือจากโปรเจกต์ปัจจุบัน แล้วสร้าง commit เดียวที่อัปเดตทั้ง 2 ไฟล์พร้อมกัน</p>
+              </div>
+              <div class="github-upload-summary-grid">
+                <div class="stat-card">
+                  <span>ไฟล์เป้าหมาย</span>
+                  <strong>2</strong>
+                  <small data-upload-summary-files>CSV + JSON ใน root ของ repo</small>
+                </div>
+                <div class="stat-card">
+                  <span>ค่าเริ่มต้น</span>
+                  <strong data-upload-summary-short-repo>thairecheckpump</strong>
+                  <small>owner / repo / branch แก้ได้ก่อนอัปโหลด</small>
+                </div>
+                <div class="stat-card">
+                  <span>ความปลอดภัย</span>
+                  <strong>Session</strong>
+                  <small>token ไม่ถูกเก็บถาวรในหน้าเว็บนี้</small>
+                </div>
+              </div>
+              <p class="github-upload-warning">
+                แนะนำให้ใช้ Fine-grained Personal Access Token ที่มีสิทธิ์ <code>Contents: Read and write</code> เฉพาะ repo นี้
+              </p>
+            </aside>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="container github-upload-shell">
+            <section class="panel section-reveal delay-1" id="github-upload-form">
+              <div class="section-header">
+                <div>
+                  <span class="eyebrow">Repository Setup</span>
+                  <h2>ตั้งค่า repo และไฟล์ที่จะอัป</h2>
+                </div>
+                <p>ถ้าไม่เลือกไฟล์จากเครื่อง ระบบจะพยายามใช้ไฟล์ชื่อเดียวกันจากโปรเจกต์ปัจจุบันแทน</p>
+              </div>
+
+              <form class="form-grid github-upload-form" data-github-upload-form>
+                <label class="field">
+                  <span>GitHub Owner</span>
+                  <input class="input" type="text" name="owner" autocomplete="username" data-upload-owner />
+                </label>
+
+                <label class="field">
+                  <span>Repository</span>
+                  <input class="input" type="text" name="repo" data-upload-repo />
+                </label>
+
+                <label class="field">
+                  <span>Branch</span>
+                  <input class="input" type="text" name="branch" data-upload-branch />
+                </label>
+
+                <label class="field">
+                  <span>Commit Message</span>
+                  <input class="input" type="text" name="message" data-upload-message-input />
+                </label>
+
+                <label class="field field-full">
+                  <span>GitHub Personal Access Token</span>
+                  <input class="input" type="password" name="token" autocomplete="current-password" placeholder="ghp_... / github_pat_..." data-upload-token />
+                  <label class="github-upload-remember">
+                    <input type="checkbox" data-upload-remember-token />
+                    <span>จำ token บนเครื่องนี้ด้วย localStorage</span>
+                  </label>
+                  <div class="github-upload-actions github-upload-token-actions">
+                    <button class="button button-ghost" type="button" data-upload-clear-token hidden>ล้าง token ที่จำไว้</button>
+                  </div>
+                  <small class="form-note">ถ้าติ๊กจำ token ระบบจะเก็บไว้ใน browser ของเครื่องนี้เท่านั้น เหมาะกับเครื่องส่วนตัว ไม่ควรใช้กับเครื่องที่มีคนอื่นเข้าถึงได้</small>
+                </label>
+
+                <div class="field field-full github-upload-files">
+                  <article class="github-upload-file-card" data-upload-card="sheet">
+                    <div class="github-upload-card-head">
+                      <div>
+                        <span class="tiny-badge">File 1</span>
+                        <h3>stations-for-google-sheet.csv</h3>
+                        <p>ไฟล์สำหรับ Google Sheets</p>
+                      </div>
+                    </div>
+
+                    <label class="field">
+                      <span>Target Path On GitHub</span>
+                      <input class="input" type="text" value="stations-for-google-sheet.csv" data-file-path />
+                    </label>
+
+                    <label class="field">
+                      <span>เลือกไฟล์จากเครื่อง</span>
+                      <input class="input" type="file" accept=".csv,text/csv" data-file-input />
+                    </label>
+
+                    <div class="github-upload-meta">
+                      <span data-file-source>Source: จะใช้ไฟล์จากโปรเจกต์ปัจจุบันถ้าไม่เลือกจากเครื่อง</span>
+                      <span data-file-size>Size: -</span>
+                    </div>
+
+                    <div class="github-upload-actions">
+                      <button class="button button-ghost" type="button" data-file-clear hidden>ล้างไฟล์ที่เลือก</button>
+                    </div>
+                  </article>
+
+                  <article class="github-upload-file-card" data-upload-card="public">
+                    <div class="github-upload-card-head">
+                      <div>
+                        <span class="tiny-badge">File 2</span>
+                        <h3>stations-public.json</h3>
+                        <p>ไฟล์ public JSON สำหรับหน้าเว็บ</p>
+                      </div>
+                    </div>
+
+                    <label class="field">
+                      <span>Target Path On GitHub</span>
+                      <input class="input" type="text" value="stations-public.json" data-file-path />
+                    </label>
+
+                    <label class="field">
+                      <span>เลือกไฟล์จากเครื่อง</span>
+                      <input class="input" type="file" accept=".json,application/json" data-file-input />
+                    </label>
+
+                    <div class="github-upload-meta">
+                      <span data-file-source>Source: จะใช้ไฟล์จากโปรเจกต์ปัจจุบันถ้าไม่เลือกจากเครื่อง</span>
+                      <span data-file-size>Size: -</span>
+                    </div>
+
+                    <div class="github-upload-actions">
+                      <button class="button button-ghost" type="button" data-file-clear hidden>ล้างไฟล์ที่เลือก</button>
+                    </div>
+                  </article>
+                </div>
+
+                <div class="field field-full github-upload-actions">
+                  <button class="button button-primary" type="submit" data-upload-submit>อัปทั้ง 2 ไฟล์ขึ้น GitHub</button>
+                  <button class="button button-outline" type="button" data-upload-reset>คืนค่า default</button>
+                </div>
+
+                <div class="message-box field-full" aria-live="polite" data-upload-message></div>
+                <div class="field field-full github-upload-result" data-upload-result></div>
+              </form>
+            </section>
+
+            <aside class="panel section-reveal delay-2 github-upload-log-panel">
+              <div class="admin-sidebar-head">
+                <div>
+                  <span class="eyebrow">Run Log</span>
+                  <h2>ลำดับการทำงาน</h2>
+                </div>
+                <p>หน้าเว็บจะ log ขั้นตอนหลักของการอ่านไฟล์ สร้าง blob, tree, commit และอัปเดต branch ให้ดูได้จากมุมนี้</p>
+              </div>
+              <ol class="github-upload-log" data-upload-log></ol>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-inner">
+          <span>Thairecheckpump GitHub Upload</span>
+          <span>อัปเดตไฟล์ export ผ่าน GitHub API | <span data-year></span></span>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

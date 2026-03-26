@@ -20,6 +20,10 @@ export const appSettings = {
       type: "static-json",
       url: "./stations-public.json",
     },
+    fuelPrices: {
+      type: "api",
+      url: "/api/fuel-prices",
+    },
   },
   collections: {
     stations: "stations",

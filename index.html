@@ -15,13 +15,13 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="styles.css?v=20260322-8" />
+    <link rel="stylesheet" href="styles.css?v=20260326-2" />
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script type="module" src="firebase-app.js?v=20260322-8"></script>
+    <script type="module" src="firebase-app.js?v=20260326-3"></script>
   </head>
   <body data-page="home">
     <div class="site-shell">
@@ -101,6 +101,22 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section section-reveal delay-2 home-fuel-price-section">
+          <div class="container">
+            <div class="panel home-fuel-price-panel">
+              <div class="section-header home-fuel-price-header">
+                <div>
+                  <span class="eyebrow">Fuel Price</span>
+                  <h2>ราคาน้ำมันอ้างอิงล่าสุด</h2>
+                  <p data-home-price-note>กำลังโหลดราคาน้ำมันอ้างอิง...</p>
+                </div>
+                <span class="tiny-badge" data-home-price-updated>กำลังโหลด</span>
+              </div>
+              <div class="home-fuel-price-grid" data-home-price-grid></div>
             </div>
           </div>
         </section>

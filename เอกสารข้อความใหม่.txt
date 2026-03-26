@@ -1,0 +1,1 @@
+powershell -ExecutionPolicy Bypass -File "C:\Users\Tarutserway\Desktop\radapump\tools\export-pumpradar-to-sheet.ps1"

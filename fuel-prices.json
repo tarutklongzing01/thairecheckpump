@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "source": "manual-json",
+  "updatedAt": "2026-03-26T00:00:00+07:00",
+  "effectiveAt": "2026-03-26T00:00:00+07:00",
+  "currency": "THB",
+  "unit": "บาท/ลิตร",
+  "note": "อัปเดตราคาจริงในไฟล์ fuel-prices.json เพื่อให้หน้า index แสดงราคาน้ำมันล่าสุด",
+  "items": [
+    {
+      "id": "diesel",
+      "label": "ดีเซล",
+      "price": null
+    },
+    {
+      "id": "gas91",
+      "label": "แก๊สโซฮอล์ 91",
+      "price": null
+    },
+    {
+      "id": "gas95",
+      "label": "แก๊สโซฮอล์ 95",
+      "price": null
+    },
+    {
+      "id": "e20",
+      "label": "E20",
+      "price": null
+    },
+    {
+      "id": "e85",
+      "label": "E85",
+      "price": null
+    },
+    {
+      "id": "lpg",
+      "label": "LPG",
+      "price": null
+    }
+  ]
+}

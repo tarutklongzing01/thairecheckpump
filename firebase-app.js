@@ -1,4 +1,4 @@
-import { firebaseConfig, appSettings } from "./firebase-config.js?v=20260322-8";
+import { firebaseConfig, appSettings } from "./firebase-config.js?v=20260326-3";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAnalytics, isSupported as isAnalyticsSupported } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
 import {
@@ -31,10 +31,11 @@ import { getDownloadURL, getStorage, ref, uploadBytes } from "https://www.gstati
 
 const FALLBACK_STORAGE_KEY = "thairecheckpump-fallback-reports";
 const DEFAULT_GOOGLE_SHEET_REFRESH_MS = 30000;
-const DEFAULT_NETLIFY_USAGE_ENDPOINT = "/.netlify/functions/netlify-usage";
-const DEFAULT_PUMPRADAR_PROXY_ENDPOINT = "/.netlify/functions/pumpradar-province";
+const DEFAULT_FUEL_PRICES_ENDPOINT = "./fuel-prices.json";
+const DEFAULT_ADMIN_USAGE_ENDPOINT = "/api/vercel-usage";
+const DEFAULT_PUMPRADAR_PROXY_ENDPOINT = "/api/pumpradar-province";
 const PUMPRADAR_PROXY_ENDPOINT_STORAGE_KEY = "thairecheckpump-pumpradar-proxy-endpoint";
-const DEFAULT_NETLIFY_USAGE_REFRESH_MS = 300000;
+const DEFAULT_ADMIN_USAGE_REFRESH_MS = 300000;
 
 const FUELS = [
   { id: "diesel", label: "ดีเซล" },
@@ -48,6 +49,55 @@ const FUELS = [
 const BRANDS = ["ปตท.", "บางจาก", "PT", "Shell", "Esso", "ซัสโก้", "Caltex"];
 
 const FUEL_LABELS = Object.fromEntries(FUELS.map((fuel) => [fuel.id, fuel.label]));
+const FUEL_PRICE_ID_ALIASES = {
+  diesel: "diesel",
+  b7: "diesel",
+  diesel_b7: "diesel",
+  gas91: "gas91",
+  gasohol91: "gas91",
+  gas95: "gas95",
+  gasohol95: "gas95",
+  e20: "e20",
+  e85: "e85",
+  lpg: "lpg",
+};
+
+const FUEL_PRICE_BRAND_ID_ALIASES = {
+  ptt: "ptt",
+  bangchak: "bcp",
+  bcp: "bcp",
+  shell: "shell",
+  caltex: "caltex",
+  irpc: "irpc",
+  pt: "pt",
+  susco: "susco",
+  pure: "pure",
+  suscodealers: "suscodealers",
+  esso: "esso",
+};
+
+const FUEL_PRICE_BRAND_PRIORITY = ["ptt", "bcp", "pt", "shell", "caltex", "susco", "esso", "irpc", "pure", "suscodealers"];
+const FUEL_PRICE_BRAND_LABELS = {
+  ptt: BRANDS[0],
+  bcp: BRANDS[1],
+  pt: BRANDS[2],
+  shell: BRANDS[3],
+  esso: BRANDS[4],
+  susco: BRANDS[5],
+  caltex: BRANDS[6],
+  irpc: "IRPC",
+  pure: "Pure",
+  suscodealers: "SUSCO Dealers",
+};
+const STATION_BRAND_TO_FUEL_PRICE_BRAND = {
+  [BRANDS[0]]: "ptt",
+  [BRANDS[1]]: "bcp",
+  [BRANDS[2]]: "pt",
+  [BRANDS[3]]: "shell",
+  [BRANDS[4]]: "esso",
+  [BRANDS[5]]: "susco",
+  [BRANDS[6]]: "caltex",
+};
 
 const STATUS_META = {
   high: { label: "พร้อมจ่าย", tone: "tone-ok", score: 1 },
@@ -321,21 +371,36 @@ const store = {
     url: "",
     generatedAtMs: 0,
   },
-  netlifyUsage: {
+  fuelPrices: {
+    status: "idle",
+    source: "",
+    url: "",
+    updatedAtMs: 0,
+    effectiveAt: "",
+    note: "",
+    currency: "THB",
+    defaultBrand: "",
+    brands: [],
+    unit: "บาท/ลิตร",
+    items: [],
+    error: "",
+  },
+  adminUsage: {
     status: "idle",
     label: "-",
-    detail: "ยังไม่ได้ตรวจสอบ Netlify usage",
+    detail: "ยังไม่ได้ตรวจสอบ Vercel usage",
     percent: 0,
-    usedMinutes: 0,
-    includedMinutes: 0,
-    buildCount: 0,
-    activeBuilds: 0,
-    queuedBuilds: 0,
+    billedCost: 0,
+    effectiveCost: 0,
+    chargeCount: 0,
+    serviceCount: 0,
+    projectName: "",
+    rangeDays: 30,
     updatedAt: "",
-    note: "ตรวจสอบ build minutes ของ Netlify ได้จากหน้า admin นี้",
+    note: "ตรวจสอบ usage และ cost ของ Vercel ได้จากหน้า admin นี้",
   },
-  netlifyUsageTimerId: 0,
-  netlifyUsageLoading: false,
+  adminUsageTimerId: 0,
+  adminUsageLoading: false,
   app: null,
   analytics: null,
   auth: null,
@@ -385,6 +450,7 @@ async function bootstrap() {
 
   renderGlobalChrome();
   await setupLocation();
+  void loadFuelPricesFromConfiguredSources();
 
   if (hasFirebaseConfig()) {
     await connectFirebase();
@@ -879,6 +945,7 @@ function createHomeController() {
         }`
       );
 
+      renderHomeFuelPrices(state.fuel, state.brands);
       renderHomeMap(state, visibleStations, state.fuel, state.radius);
       renderHTML(
         "[data-station-list]",
@@ -886,6 +953,159 @@ function createHomeController() {
       );
     },
   };
+}
+
+function renderHomeFuelPrices(selectedFuelId, selectedBrands) {
+  const brandState = getHomeFuelPriceBrandState(selectedBrands);
+  const note = getHomeFuelPricesNote(brandState);
+  const updatedLabel = getHomeFuelPricesUpdatedLabel();
+  const items = getHomeFuelPriceItems(brandState);
+
+  setText("[data-home-price-note]", note);
+  setText("[data-home-price-updated]", updatedLabel);
+  renderHTML(
+    "[data-home-price-grid]",
+    items.length
+      ? items.map((item) => renderHomeFuelPriceCard(item, selectedFuelId)).join("")
+      : renderEmptyState("ยังไม่มีข้อมูลราคาน้ำมันสำหรับแสดงบนหน้าแรก")
+  );
+}
+
+function getHomeFuelPriceBrandState(selectedBrands) {
+  const brands = Array.isArray(store.fuelPrices?.brands) ? store.fuelPrices.brands : [];
+  if (!brands.length) {
+    return null;
+  }
+
+  const brandsById = new Map(brands.map((brand) => [brand.id, brand]));
+  const selectedBrandIds = Array.from(selectedBrands || [])
+    .map((brand) => mapStationBrandToFuelPriceBrandId(brand))
+    .filter((brandId, index, list) => brandId && list.indexOf(brandId) === index);
+  const selectedMatches = selectedBrandIds.filter((brandId) => brandsById.has(brandId));
+
+  if (selectedMatches.length === 1) {
+    return {
+      brand: brandsById.get(selectedMatches[0]),
+      reason: "selected-single",
+    };
+  }
+
+  if (selectedMatches.length > 1) {
+    return {
+      brand: brandsById.get(selectedMatches[0]),
+      reason: "selected-multi",
+    };
+  }
+
+  const defaultBrandId = normalizeFuelPriceBrandId(store.fuelPrices?.defaultBrand);
+  if (defaultBrandId && brandsById.has(defaultBrandId)) {
+    return {
+      brand: brandsById.get(defaultBrandId),
+      reason: selectedBrandIds.length ? "fallback-default" : "default",
+    };
+  }
+
+  return {
+    brand: brands[0],
+    reason: selectedBrandIds.length ? "fallback-first" : "first-available",
+  };
+}
+
+function getHomeFuelPriceItems(brandState) {
+  const sourceItems = Array.isArray(brandState?.brand?.items) && brandState.brand.items.length ? brandState.brand.items : Array.isArray(store.fuelPrices?.items) ? store.fuelPrices.items : [];
+  const itemMap = new Map(sourceItems.map((item) => [item.id, item]));
+
+  return FUELS.map((fuel) => {
+    const existing = itemMap.get(fuel.id);
+    if (existing) {
+      return existing;
+    }
+
+    return {
+      id: fuel.id,
+      label: fuel.label,
+      price: Number.NaN,
+      note: "รออัปเดตราคา",
+    };
+  });
+}
+
+function getHomeFuelPricesNote(brandState) {
+  if (store.fuelPrices.status === "loading") {
+    return "กำลังโหลดราคาน้ำมันอ้างอิงจากไฟล์สาธารณะ...";
+  }
+  if (store.fuelPrices.status === "error") {
+    return store.fuelPrices.error || "โหลดราคาน้ำมันไม่สำเร็จ";
+  }
+  const noteParts = [];
+  if (store.fuelPrices.note) {
+    noteParts.push(store.fuelPrices.note);
+  }
+
+  const brandLabel = String(brandState?.brand?.label || "").trim();
+  if (brandLabel) {
+    if (brandState.reason === "selected-single") {
+      noteParts.push(`แสดงชุดราคา ${brandLabel}`);
+    } else if (brandState.reason === "selected-multi") {
+      noteParts.push(`เลือกชุดราคา ${brandLabel} เพราะกำลังดูหลายแบรนด์`);
+    } else if (brandState.reason === "fallback-default" || brandState.reason === "fallback-first") {
+      noteParts.push(`ไม่พบราคาของแบรนด์ที่เลือก จึงแสดง ${brandLabel}`);
+    } else {
+      noteParts.push(`แสดงชุดราคา ${brandLabel}`);
+    }
+  }
+
+  if (noteParts.length) {
+    return noteParts.join(" | ");
+  }
+  if (store.fuelPrices.updatedAtMs > 0) {
+    return `อัปเดตล่าสุด ${formatAdminTimestamp(store.fuelPrices.effectiveAt || store.fuelPrices.updatedAtMs)}`;
+  }
+  return "ยังไม่มีข้อมูลราคาน้ำมันอ้างอิง";
+}
+
+function getHomeFuelPricesUpdatedLabel() {
+  if (store.fuelPrices.status === "error") {
+    return "ราคาโหลดไม่สำเร็จ";
+  }
+  if (store.fuelPrices.status === "loading") {
+    return "กำลังโหลดราคา";
+  }
+  if (store.fuelPrices.updatedAtMs > 0) {
+    return `อัปเดต ${formatShortAge(getAgeMinutesFromMs(store.fuelPrices.updatedAtMs))}`;
+  }
+  return "รออัปเดต";
+}
+
+function renderHomeFuelPriceCard(item, selectedFuelId) {
+  const isActive = item.id === selectedFuelId;
+  const priceText = formatFuelPriceValue(item.price, store.fuelPrices.unit);
+  const metaText = item.note || (Number.isFinite(item.price) ? store.fuelPrices.unit : "รออัปเดตราคา");
+
+  return `
+    <article class="home-fuel-price-card${isActive ? " is-active" : ""}">
+      <div class="home-fuel-price-card-head">
+        <span class="tiny-badge">${escapeHtml(item.id)}</span>
+        ${isActive ? '<span class="status-badge tone-ok">Fuel Filter</span>' : ""}
+      </div>
+      <strong>${escapeHtml(item.label)}</strong>
+      <div class="home-fuel-price-value">${escapeHtml(priceText)}</div>
+      <small>${escapeHtml(metaText)}</small>
+    </article>
+  `;
+}
+
+function formatFuelPriceValue(value, unit) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return "รออัปเดต";
+  }
+  return `${amount.toFixed(2)} ${unit || "บาท/ลิตร"}`;
+}
+
+function mapStationBrandToFuelPriceBrandId(value) {
+  const normalizedBrand = normalizeBrandLabel(value);
+  return STATION_BRAND_TO_FUEL_PRICE_BRAND[normalizedBrand] || normalizeFuelPriceBrandId(value);
 }
 
 function ensureHomeMap(state) {
@@ -1269,8 +1489,8 @@ function createAdminController() {
     init() {
       renderAdminFuelFields(document.querySelector("[data-admin-fuel-grid]"));
       renderAdminImportProvinceOptions(document.querySelector("[data-admin-import-province]"));
-      ensureAdminNetlifyUsagePolling();
-      refreshAdminNetlifyUsage();
+      ensureAdminUsagePolling();
+      refreshAdminUsage();
 
       const searchInput = document.querySelector("[data-admin-search]");
       const form = document.querySelector("[data-admin-form]");
@@ -1413,7 +1633,7 @@ function createAdminController() {
       setText("[data-admin-auth]", isGoogleUser() ? "Google" : store.authReady ? "ยังไม่ล็อกอิน" : "รอตรวจสอบ");
       setText("[data-admin-write]", hasAdminAccess() ? "เขียนได้" : "ปิดอยู่");
       renderAdminFirebaseStatus();
-      renderAdminNetlifyUsage();
+      renderAdminUsage();
 
       renderHTML(
         "[data-admin-list]",
@@ -1575,12 +1795,14 @@ function renderAdminStationRow(station, isActive) {
   const readyCount = Object.values(fuels).filter((status) => statusScore(status) >= 0.66).length;
   const knownCount = Object.values(fuels).filter((status) => statusScore(status) >= 0).length;
   const reportTotal = Number.isFinite(station.reports) ? station.reports : Number(station.reportCount || 0);
+  const stationId = String(station.id || "").trim();
+  const stationIdLabel = formatAdminIdentifier(stationId);
 
   return `
-    <button class="admin-station-row${isActive ? " is-active" : ""}" type="button" data-admin-select="${escapeHtml(station.id)}">
+    <button class="admin-station-row${isActive ? " is-active" : ""}" type="button" data-admin-select="${escapeHtml(station.id)}" title="${escapeHtml(stationId)}">
       <div class="admin-station-row-head">
         <span class="brand-badge">${escapeHtml(station.brand)}</span>
-        <span class="tiny-badge">${escapeHtml(station.id)}</span>
+        <span class="tiny-badge" title="${escapeHtml(stationId)}">${escapeHtml(stationIdLabel)}</span>
       </div>
       <strong>${escapeHtml(station.name)}</strong>
       <div class="meta-row muted">
@@ -1680,9 +1902,6 @@ async function saveAdminStation(form, state) {
   setMessage(messageBox, "กำลังบันทึกสถานี...");
 
   try {
-    if (store.stationSource.type !== "firestore") {
-      throw new Error(`หน้าเว็บตั้งให้ใช้ ${getStationSourceLabel()} เป็นแหล่งข้อมูลสถานีอยู่ ให้แก้ข้อมูลสถานีที่แหล่งหลักแล้ว publish ใหม่`);
-    }
     if (store.mode !== "firebase" || !store.db) {
       throw new Error("โหมดนี้ยังไม่เชื่อม Firestore จึงแก้ไขสถานีไม่ได้");
     }
@@ -1717,6 +1936,11 @@ async function saveAdminStation(form, state) {
       { merge: true }
     );
 
+    upsertAdminStationInStore(payload.stationId, {
+      ...payload,
+      updatedAt: new Date(),
+    });
+
     state.isCreating = false;
     state.selectedId = payload.stationId;
     state.hydratedKey = "";
@@ -1732,7 +1956,7 @@ async function saveAdminStation(form, state) {
       photoUrl: payload.photoUrl,
       fuelStates: normalizeFuelStates(payload.fuelStates),
     };
-    setMessage(messageBox, `บันทึกสถานี ${payload.name} แล้ว`);
+    setMessage(messageBox, `บันทึกสถานี ${payload.name} แล้ว${getAdminFirestoreWriteSuccessNote()}`);
   } catch (error) {
     console.error(error);
     maybeTrackFirebaseError("admin-station-save", error);
@@ -1748,9 +1972,6 @@ async function deleteAdminStation(state) {
       setMessage(messageBox, "เลือกสถานีก่อนลบ");
       return;
     }
-    if (store.stationSource.type !== "firestore") {
-      throw new Error(`หน้าเว็บตั้งให้ใช้ ${getStationSourceLabel()} เป็นแหล่งข้อมูลสถานีอยู่ ให้ลบหรือแก้ไขสถานีที่แหล่งหลักแทน`);
-    }
     if (store.mode !== "firebase" || !store.db) {
       throw new Error("โหมดนี้ยังไม่เชื่อม Firestore จึงลบสถานีไม่ได้");
     }
@@ -1764,16 +1985,19 @@ async function deleteAdminStation(state) {
       return;
     }
 
-    const reportSnapshot = await getDocs(query(collection(store.db, appSettings.collections.reports), where("stationId", "==", state.selectedId)));
+    const deletedStationId = state.selectedId;
+    const reportSnapshot = await getDocs(query(collection(store.db, appSettings.collections.reports), where("stationId", "==", deletedStationId)));
     await Promise.all(reportSnapshot.docs.map((item) => deleteDoc(item.ref)));
-    await deleteDoc(doc(store.db, appSettings.collections.stations, state.selectedId));
+    await deleteDoc(doc(store.db, appSettings.collections.stations, deletedStationId));
+    removeAdminStationFromStore(deletedStationId);
+
     state.selectedId = "";
     state.hydratedKey = "";
     state.pendingDraft = null;
     state.selectedReportId = "";
     state.reportHydratedKey = "";
     state.pendingReportDraft = null;
-    setMessage(messageBox, `ลบสถานีและรายงานที่เกี่ยวข้อง ${reportSnapshot.size} รายการแล้ว`);
+    setMessage(messageBox, `ลบสถานีและรายงานที่เกี่ยวข้อง ${reportSnapshot.size} รายการแล้ว${getAdminFirestoreWriteSuccessNote()}`);
   } catch (error) {
     console.error(error);
     maybeTrackFirebaseError("admin-station-delete", error);
@@ -1854,9 +2078,11 @@ function syncAdminReportSelection(state, reports, filteredReports) {
 
 function renderAdminReportRow(report, isActive) {
   const meta = STATUS_META[report.status || "unknown"];
+  const stationId = String(report.stationId || "").trim();
+  const stationIdLabel = formatAdminIdentifier(stationId);
 
   return `
-    <button class="admin-report-row${isActive ? " is-active" : ""}" type="button" data-admin-report-select="${escapeHtml(report.id)}">
+    <button class="admin-report-row${isActive ? " is-active" : ""}" type="button" data-admin-report-select="${escapeHtml(report.id)}" title="${escapeHtml(stationId || report.id)}">
       <div class="admin-station-row-head">
         <span class="brand-badge">${escapeHtml(report.brand)}</span>
         <span class="status-badge ${meta.tone}">${escapeHtml(meta.label)}</span>
@@ -1867,11 +2093,22 @@ function renderAdminReportRow(report, isActive) {
         <span>${escapeHtml(report.reporter || "ไม่ระบุชื่อ")}</span>
       </div>
       <div class="detail-row muted">
-        <span>${escapeHtml(report.stationId)}</span>
+        <span title="${escapeHtml(stationId)}">${escapeHtml(stationIdLabel)}</span>
         <span>${escapeHtml(formatAge(getReportAge(report)))}</span>
       </div>
     </button>
   `;
+}
+
+function formatAdminIdentifier(value, head = 12, tail = 6) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "-";
+  }
+  if (text.length <= head + tail + 3) {
+    return text;
+  }
+  return `${text.slice(0, head)}...${text.slice(-tail)}`;
 }
 
 function buildEmptyAdminReportDraft() {
@@ -2428,17 +2665,16 @@ function getPumpRadarProxyUnavailableMessage() {
   const hostname = String(window.location.hostname || "").toLowerCase();
   const isLocalHost = protocol === "file:" || hostname === "localhost" || hostname === "127.0.0.1";
   const proxyEndpoint = getPumpRadarProxyEndpoint();
-  const isDefaultEndpoint = proxyEndpoint === DEFAULT_PUMPRADAR_PROXY_ENDPOINT;
 
-  if (isLocalHost && isDefaultEndpoint) {
-    return 'PumpRadar proxy is unavailable here because this page is not running through Netlify Functions. Run "netlify dev", open the deployed Netlify URL, or paste the deployed function URL into "PumpRadar Proxy URL".';
+  if (isLocalHost && (!proxyEndpoint || proxyEndpoint === DEFAULT_PUMPRADAR_PROXY_ENDPOINT)) {
+    return 'PumpRadar proxy ใช้งานไม่ได้ในหน้านี้ เพราะยังไม่ได้รันผ่าน backend ของเว็บ ให้เปิดผ่าน "vercel dev" หรือใส่ URL ของฟังก์ชันที่ deploy แล้วในช่อง "PumpRadar Proxy URL"';
   }
 
-  if (isDefaultEndpoint) {
-    return "PumpRadar proxy returned 404 because this site has not deployed the new Netlify function yet. Push the latest code and wait for Netlify to redeploy.";
+  if (!proxyEndpoint || proxyEndpoint === DEFAULT_PUMPRADAR_PROXY_ENDPOINT) {
+    return "PumpRadar proxy ตอบกลับ 404 ให้เช็กว่าฟังก์ชันฝั่งเว็บถูก deploy แล้วบน Vercel";
   }
 
-  return `PumpRadar proxy returned 404 at ${proxyEndpoint}. Check that this URL points to a deployed Netlify function.`;
+  return `PumpRadar proxy returned 404 at ${proxyEndpoint}. Check that this URL points to a deployed backend function.`;
 }
 
 function canImportStationsToFirestore() {
@@ -2463,11 +2699,7 @@ function getAdminImportSourceNote() {
 }
 
 function getAdminImportSourceSuccessNote() {
-  if (store.stationSource.type === "firestore") {
-    return "";
-  }
-
-  return ` Saved to Firestore only. Public pages still use ${getStationSourceLabel()}.`;
+  return getAdminFirestoreWriteSuccessNote();
 }
 
 function buildPumpRadarStationEntriesFromSelection(selection) {
@@ -2605,7 +2837,7 @@ async function loadPumpRadarProvinceJsonV3() {
 
 async function importPumpRadarStationsFromProxyV3() {
   const messageBox = document.querySelector("[data-admin-import-message]");
-  setMessage(messageBox, "Fetching PumpRadar payloads via Netlify proxy...");
+  setMessage(messageBox, "Fetching PumpRadar payloads via backend proxy...");
 
   try {
     assertCanImportStationsToFirestore();
@@ -2625,13 +2857,14 @@ async function importPumpRadarStationsFromProxyV3() {
     const selectionLabel = describeProvinceImportSelection(selection);
     setMessage(messageBox, `Importing ${stationEntries.length} stations from ${selectionLabel}...`);
     await writeDocsInBatches(appSettings.collections.stations, stationEntries);
+    syncImportedStationsInAdminStore(stationEntries);
 
     const failureNote = result.failures.length
       ? ` Failed provinces: ${result.failures.map((item) => item.provinceSlug).join(", ")}.`
       : "";
     setMessage(
       messageBox,
-      `Imported ${stationEntries.length} stations from ${selection.payloads.length} province payloads (${selectionLabel}) via Netlify proxy.${failureNote}${getAdminImportSourceSuccessNote()}`
+      `Imported ${stationEntries.length} stations from ${selection.payloads.length} province payloads (${selectionLabel}) via backend proxy.${failureNote}${getAdminImportSourceSuccessNote()}`
     );
   } catch (error) {
     console.error(error);
@@ -3805,6 +4038,258 @@ function getStationsSourceConfig() {
   };
 }
 
+function getFuelPricesEndpoint() {
+  const configuredUrl = String(appSettings.dataSources?.fuelPrices?.url || "").trim();
+  return configuredUrl || DEFAULT_FUEL_PRICES_ENDPOINT;
+}
+
+async function loadFuelPrices() {
+  const endpoint = getFuelPricesEndpoint();
+  if (!endpoint) {
+    return false;
+  }
+
+  store.fuelPrices = {
+    ...store.fuelPrices,
+    status: "loading",
+    url: endpoint,
+    error: "",
+  };
+  refreshCurrentPage();
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain;q=0.9, */*;q=0.8",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`ไฟล์ราคาน้ำมันตอบกลับ ${response.status}`);
+    }
+
+    const payload = await response.json();
+    store.fuelPrices = parseFuelPricesPayload(payload, endpoint);
+  } catch (error) {
+    console.error(error);
+    store.fuelPrices = {
+      ...store.fuelPrices,
+      status: "error",
+      url: endpoint,
+      error: `โหลดราคาน้ำมันไม่สำเร็จ: ${humanizeError(error)}`,
+    };
+  }
+
+  refreshCurrentPage();
+  return true;
+}
+
+function parseFuelPricesPayload(payload, endpoint) {
+  const rawItems = Array.isArray(payload?.items)
+    ? payload.items
+    : payload?.prices && typeof payload.prices === "object"
+      ? Object.entries(payload.prices).map(([id, value]) => ({
+          id,
+          ...(value && typeof value === "object" && !Array.isArray(value) ? value : { price: value }),
+        }))
+      : [];
+
+  const items = rawItems
+    .map((item) => normalizeFuelPriceItem(item))
+    .filter(Boolean)
+    .sort((left, right) => getFuelSortIndex(left.id) - getFuelSortIndex(right.id));
+
+  return {
+    status: items.length ? "ready" : "empty",
+    source: String(payload?.source || "manual-json").trim() || "manual-json",
+    url: endpoint,
+    updatedAtMs: timestampToMs(payload?.updatedAt || payload?.generatedAt || payload?.effectiveAt || Date.now()),
+    effectiveAt: String(payload?.effectiveAt || payload?.effectiveDate || payload?.updatedAt || "").trim(),
+    note: String(payload?.note || "").trim(),
+    currency: String(payload?.currency || "THB").trim() || "THB",
+    unit: String(payload?.unit || "บาท/ลิตร").trim() || "บาท/ลิตร",
+    items,
+    error: "",
+  };
+}
+
+function normalizeFuelPriceItem(item) {
+  const normalizedId = normalizeFuelPriceId(item?.id);
+  if (!normalizedId) {
+    return null;
+  }
+
+  return {
+    id: normalizedId,
+    label: String(item?.label || FUEL_LABELS[normalizedId] || normalizedId).trim(),
+    price: parseOptionalNumber(item?.price ?? item?.value ?? item?.amount),
+    note: String(item?.note || "").trim(),
+  };
+}
+
+function normalizeFuelPriceId(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("-", "")
+    .replaceAll("_", "");
+
+  return FUEL_PRICE_ID_ALIASES[normalized] || "";
+}
+
+function getFuelSortIndex(fuelId) {
+  const index = FUELS.findIndex((fuel) => fuel.id === fuelId);
+  return index >= 0 ? index : FUELS.length + 1;
+}
+
+async function loadFuelPricesFromConfiguredSources() {
+  const primaryEndpoint = getFuelPricesEndpoint();
+  if (!primaryEndpoint) {
+    return false;
+  }
+
+  store.fuelPrices = {
+    ...store.fuelPrices,
+    status: "loading",
+    url: primaryEndpoint,
+    error: "",
+  };
+  refreshCurrentPage();
+
+  const endpoints = [primaryEndpoint];
+  if (primaryEndpoint !== DEFAULT_FUEL_PRICES_ENDPOINT) {
+    endpoints.push(DEFAULT_FUEL_PRICES_ENDPOINT);
+  }
+
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const payload = await fetchFuelPricesPayload(endpoint);
+      store.fuelPrices = parseFuelPricesPayloadFromSource(payload, endpoint, {
+        usedFallback: endpoint !== primaryEndpoint,
+      });
+      refreshCurrentPage();
+      return true;
+    } catch (error) {
+      console.error(error);
+      lastError = error;
+    }
+  }
+
+  store.fuelPrices = {
+    ...store.fuelPrices,
+    status: "error",
+    url: primaryEndpoint,
+    error: `โหลดราคาน้ำมันไม่สำเร็จ: ${humanizeError(lastError)}`,
+  };
+  refreshCurrentPage();
+  return false;
+}
+
+async function fetchFuelPricesPayload(endpoint) {
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers: {
+      Accept: "application/json, text/plain;q=0.9, */*;q=0.8",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`ไฟล์ราคาน้ำมันตอบกลับ ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function parseFuelPricesPayloadFromSource(payload, endpoint, options = {}) {
+  const brands = Array.isArray(payload?.brands)
+    ? payload.brands
+        .map((brand) => normalizeFuelPriceBrand(brand))
+        .filter(Boolean)
+        .sort((left, right) => getFuelPriceBrandSortIndex(left.id) - getFuelPriceBrandSortIndex(right.id))
+    : [];
+  const defaultBrandId = normalizeFuelPriceBrandId(payload?.defaultBrand);
+  const defaultBrand = (defaultBrandId && brands.find((brand) => brand.id === defaultBrandId)) || brands[0] || null;
+  const rawItems = Array.isArray(payload?.items)
+    ? payload.items
+    : payload?.prices && typeof payload.prices === "object"
+      ? Object.entries(payload.prices).map(([id, value]) => ({
+          id,
+          ...(value && typeof value === "object" && !Array.isArray(value) ? value : { price: value }),
+        }))
+      : [];
+  const items = brands.length ? defaultBrand?.items || [] : normalizeFuelPriceItems(rawItems);
+  const noteParts = [String(payload?.note || "").trim()];
+  if (options.usedFallback) {
+    noteParts.push("กำลังใช้ไฟล์ราคาสำรอง");
+  }
+
+  return {
+    status: items.some((item) => Number.isFinite(item.price)) || brands.length ? "ready" : "empty",
+    source: String(payload?.source || "manual-json").trim() || "manual-json",
+    url: endpoint,
+    updatedAtMs: timestampToMs(payload?.updatedAt || payload?.generatedAt || payload?.fetchedAt || payload?.effectiveAt || Date.now()),
+    effectiveAt: String(payload?.effectiveAt || payload?.effectiveDate || payload?.updatedAt || "").trim(),
+    note: noteParts.filter(Boolean).join(" | "),
+    currency: String(payload?.currency || "THB").trim() || "THB",
+    unit: String(payload?.unit || "บาท/ลิตร").trim() || "บาท/ลิตร",
+    defaultBrand: defaultBrand?.id || defaultBrandId,
+    brands,
+    items,
+    error: "",
+  };
+}
+
+function normalizeFuelPriceBrand(brand) {
+  const normalizedId = normalizeFuelPriceBrandId(brand?.id || brand?.slug || brand?.code || brand?.label);
+  const items = normalizeFuelPriceItems(brand?.items);
+  if (!normalizedId || !items.length) {
+    return null;
+  }
+
+  const fallbackLabel = String(brand?.label || FUEL_PRICE_BRAND_LABELS[normalizedId] || normalizedId.toUpperCase()).trim();
+  return {
+    id: normalizedId,
+    label: normalizeBrandLabel(FUEL_PRICE_BRAND_LABELS[normalizedId] || fallbackLabel),
+    items,
+  };
+}
+
+function normalizeFuelPriceItems(items) {
+  const seen = new Set();
+  return (Array.isArray(items) ? items : [])
+    .map((item) => normalizeFuelPriceItem(item))
+    .filter((item) => {
+      if (!item || seen.has(item.id)) {
+        return false;
+      }
+      seen.add(item.id);
+      return true;
+    })
+    .sort((left, right) => getFuelSortIndex(left.id) - getFuelSortIndex(right.id));
+}
+
+function normalizeFuelPriceBrandId(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("&", "")
+    .replaceAll("-", "")
+    .replaceAll("_", "")
+    .replaceAll(".", "")
+    .replaceAll(" ", "");
+
+  return FUEL_PRICE_BRAND_ID_ALIASES[normalized] || "";
+}
+
+function getFuelPriceBrandSortIndex(brandId) {
+  const index = FUEL_PRICE_BRAND_PRIORITY.indexOf(brandId);
+  return index >= 0 ? index : FUEL_PRICE_BRAND_PRIORITY.length + 1;
+}
+
 function wantsGoogleSheetStations() {
   return getStationsSourceConfig().type === "google-sheet";
 }
@@ -3845,7 +4330,74 @@ function getStationSourceLabel() {
 }
 
 function canManageStationsInFirestore() {
-  return hasAdminAccess() && store.mode === "firebase" && store.stationSource.type === "firestore";
+  return hasAdminAccess() && store.mode === "firebase" && Boolean(store.db);
+}
+
+function getAdminFirestoreWriteSuccessNote() {
+  if (store.stationSource.type === "firestore") {
+    return "";
+  }
+
+  return ` หน้า public ยังใช้ ${getStationSourceLabel()} อยู่จนกว่าจะ publish หรือสลับ source`;
+}
+
+function upsertAdminStationInStore(stationId, data = {}) {
+  const normalizedId = String(stationId || "").trim();
+  if (!normalizedId) {
+    return;
+  }
+
+  const existingIndex = store.stations.findIndex((station) => station.id === normalizedId);
+  const existingStation = existingIndex >= 0 ? store.stations[existingIndex] : null;
+  const updatedAtMs = timestampToMs(data.updatedAt || data.createdAt || Date.now());
+  const nextStation = {
+    ...existingStation,
+    id: normalizedId,
+    name: String(data.name || existingStation?.name || normalizedId).trim(),
+    brand: normalizeBrandLabel(data.brand || existingStation?.brand),
+    area: String(data.area || existingStation?.area || "ยังไม่ระบุพื้นที่").trim(),
+    lat: coerceNumber(data.lat ?? existingStation?.lat),
+    lng: coerceNumber(data.lng ?? existingStation?.lng),
+    reportCount: Math.max(0, Math.round(Number(data.reportCount ?? existingStation?.reportCount ?? 0) || 0)),
+    updatedMinutes: minutesSince(updatedAtMs),
+    updatedAtMs,
+    fuelStates: normalizeFuelStates(data.fuelStates || existingStation?.fuelStates),
+    photoUrl: String(data.photoUrl || existingStation?.photoUrl || "").trim(),
+    importSource: String(data.importSource || existingStation?.importSource || "").trim(),
+    lastReporter: normalizeReporterLabel(
+      String(data.lastReporter || existingStation?.lastReporter || getGoogleUserLabel() || "Admin").trim()
+    ),
+  };
+
+  if (existingIndex >= 0) {
+    store.stations.splice(existingIndex, 1, nextStation);
+    return;
+  }
+
+  store.stations.unshift(nextStation);
+}
+
+function removeAdminStationFromStore(stationId) {
+  const normalizedId = String(stationId || "").trim();
+  if (!normalizedId) {
+    return;
+  }
+
+  store.stations = store.stations.filter((station) => station.id !== normalizedId);
+}
+
+function syncImportedStationsInAdminStore(stationEntries) {
+  if (!Array.isArray(stationEntries) || !stationEntries.length) {
+    return;
+  }
+
+  stationEntries.forEach((entry) => {
+    if (!entry?.id || !entry?.data) {
+      return;
+    }
+
+    upsertAdminStationInStore(entry.id, entry.data);
+  });
 }
 
 function syncFirebaseComponentState() {
@@ -4488,7 +5040,7 @@ function getAdminFirebaseHealthSummary() {
     return {
       label: "Ready / sheet stations",
       detail: "หน้า public กำลังใช้ stations จาก Google Sheet ส่วนรายงานและ auth ยังใช้ Firebase",
-      note: "ถ้าจะแก้ข้อมูลสถานีให้แก้ใน Google Sheet แล้ว publish endpoint ใหม่ ไม่ใช่แก้ใน Firestore",
+      note: "แก้ใน Firestore จากหลังบ้านได้ แต่หน้า public จะยังไม่เปลี่ยนจนกว่าจะอัปเดต Google Sheet หรือสลับ source",
     };
   }
 
@@ -4496,7 +5048,7 @@ function getAdminFirebaseHealthSummary() {
     return {
       label: "Ready / static stations",
       detail: "หน้า public กำลังใช้ stations จากไฟล์ข้อมูลภายในเว็บ ส่วนรายงานและ auth ยังใช้ Firebase",
-      note: "ถ้าจะแก้ข้อมูลสถานีให้ export JSON ใหม่แล้วแทนที่ไฟล์ในเว็บ ไม่ใช่แก้ใน Firestore",
+      note: "แก้ใน Firestore จากหลังบ้านได้ แต่หน้า public จะยังไม่เปลี่ยนจนกว่าจะ export JSON ใหม่หรือสลับ source",
     };
   }
 
@@ -4551,38 +5103,38 @@ function renderAdminFirebaseStatus() {
   setText("[data-admin-summary-note]", health.note);
 }
 
-function ensureAdminNetlifyUsagePolling() {
+function ensureAdminUsagePolling() {
   if (store.page !== "admin") {
     return;
   }
-  if (store.netlifyUsageTimerId) {
+  if (store.adminUsageTimerId) {
     return;
   }
 
-  store.netlifyUsageTimerId = window.setInterval(() => {
-    refreshAdminNetlifyUsage({ background: true });
-  }, DEFAULT_NETLIFY_USAGE_REFRESH_MS);
+  store.adminUsageTimerId = window.setInterval(() => {
+    refreshAdminUsage({ background: true });
+  }, DEFAULT_ADMIN_USAGE_REFRESH_MS);
 }
 
-async function refreshAdminNetlifyUsage(options = {}) {
+async function refreshAdminUsage(options = {}) {
   const { background = false } = options;
-  if (store.page !== "admin" || store.netlifyUsageLoading) {
+  if (store.page !== "admin" || store.adminUsageLoading) {
     return false;
   }
 
-  store.netlifyUsageLoading = true;
-  if (!background && store.netlifyUsage.status === "idle") {
-    store.netlifyUsage = {
-      ...store.netlifyUsage,
+  store.adminUsageLoading = true;
+  if (!background && store.adminUsage.status === "idle") {
+    store.adminUsage = {
+      ...store.adminUsage,
       status: "loading",
       label: "กำลังเช็ก",
-      detail: "กำลังดึง usage จาก Netlify",
+      detail: "กำลังดึง usage จาก Vercel",
     };
-    renderAdminNetlifyUsage();
+    renderAdminUsage();
   }
 
   try {
-    const response = await fetch(DEFAULT_NETLIFY_USAGE_ENDPOINT, {
+    const response = await fetch(DEFAULT_ADMIN_USAGE_ENDPOINT, {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -4598,91 +5150,87 @@ async function refreshAdminNetlifyUsage(options = {}) {
     }
 
     if (!response.ok || !payload) {
-      throw new Error(payload?.detail || payload?.message || `Netlify usage endpoint ตอบกลับ ${response.status}`);
+      throw new Error(payload?.detail || payload?.message || `Vercel usage endpoint ตอบกลับ ${response.status}`);
     }
 
-    store.netlifyUsage = normalizeAdminNetlifyUsage(payload);
+    store.adminUsage = normalizeAdminUsage(payload);
   } catch (error) {
-    store.netlifyUsage = {
+    store.adminUsage = {
       status: "error",
       label: "เชื่อมไม่ได้",
       detail: humanizeError(error),
       percent: 0,
-      usedMinutes: 0,
-      includedMinutes: 0,
-      buildCount: 0,
-      activeBuilds: 0,
-      queuedBuilds: 0,
+      billedCost: 0,
+      effectiveCost: 0,
+      chargeCount: 0,
+      serviceCount: 0,
+      projectName: "",
+      rangeDays: 30,
       updatedAt: "",
-      note: "หน้า admin ดึง limit ของ Netlify ไม่สำเร็จ ตรวจ token, account id หรือฟังก์ชันบน Netlify อีกครั้ง",
+      note: "หน้า admin ดึง usage ของ Vercel ไม่สำเร็จ ตรวจ token, team id/slug หรือฟังก์ชันบน Vercel อีกครั้ง",
     };
   } finally {
-    store.netlifyUsageLoading = false;
-    renderAdminNetlifyUsage();
+    store.adminUsageLoading = false;
+    renderAdminUsage();
   }
 
   return true;
 }
 
-function normalizeAdminNetlifyUsage(payload) {
+function normalizeAdminUsage(payload) {
   const state = String(payload?.state || (payload?.ok ? "ok" : "error")).toLowerCase();
-  const rawPercent = Number(payload?.percentUsed || payload?.percent || 0);
+  const rawPercent = Number(payload?.projectSharePercent || payload?.percent || 0);
   const percent = Number.isFinite(rawPercent) ? Math.max(0, rawPercent) : 0;
-  const usedMinutes = Number(payload?.currentMinutes || payload?.usedMinutes || 0) || 0;
-  const includedMinutes = Number(payload?.includedMinutes || 0) || 0;
-  const buildCount = Number(payload?.buildCount || 0) || 0;
-  const activeBuilds = Number(payload?.active || payload?.activeBuilds || 0) || 0;
-  const queuedBuilds = Number(payload?.enqueued || payload?.queuedBuilds || 0) || 0;
-  const hasUsageQuota = includedMinutes > 0;
-  const displayState = state === "ok" && !hasUsageQuota ? "connected" : state;
+  const billedCost = Number(payload?.totalBilledCost || payload?.billedCost || 0) || 0;
+  const effectiveCost = Number(payload?.totalEffectiveCost || payload?.effectiveCost || 0) || 0;
+  const chargeCount = Number(payload?.chargeCount || 0) || 0;
+  const serviceCount = Number(payload?.serviceCount || (Array.isArray(payload?.services) ? payload.services.length : 0) || 0) || 0;
+  const rangeDays = Number(payload?.rangeDays || 30) || 30;
+  const projectName = String(payload?.projectName || payload?.projectFilter || "").trim();
+  const currency = String(payload?.currency || "USD").trim() || "USD";
+  const displayState = state === "ok" && !chargeCount ? "connected" : state;
   const label =
     displayState === "missing-config"
       ? "ยังไม่ได้เชื่อม"
       : displayState === "connected"
-        ? "เชื่อมแล้ว"
-        : displayState === "danger"
-          ? `${Math.round(percent)}% เต็ม`
-          : displayState === "warning"
-            ? `${Math.round(percent)}% ใช้แล้ว`
-            : hasUsageQuota
-              ? `${Math.round(percent)}% ใช้แล้ว`
-              : "เช็กได้";
+        ? "ยังไม่พบ usage"
+        : formatAdminCurrency(billedCost, currency);
   const detail =
     displayState === "missing-config"
-      ? payload?.detail || "ยังไม่ได้ตั้ง NETLIFY_API_TOKEN และ NETLIFY_ACCOUNT_ID"
+      ? payload?.detail || "ยังไม่ได้ตั้ง VERCEL_API_TOKEN และ VERCEL_TEAM_ID หรือ VERCEL_TEAM_SLUG"
       : displayState === "connected"
-        ? "Netlify API ต่อได้แล้ว แต่แพลนนี้ยังไม่ส่ง quota build minutes ให้คำนวณเป็น %"
-        : hasUsageQuota
-          ? `${formatAdminNumber(usedMinutes)} / ${formatAdminNumber(includedMinutes)} นาทีในรอบบิลนี้`
-          : payload?.detail || "ยังไม่พบข้อมูล limit จาก Netlify";
+        ? payload?.detail || `ยังไม่พบ usage ในช่วง ${rangeDays} วันที่เลือก`
+        : `${formatAdminCurrency(effectiveCost, currency)} effective | ${formatAdminNumber(chargeCount)} charges | ${formatAdminNumber(serviceCount)} services`;
 
   return {
     status: displayState,
     label,
     detail,
     percent,
-    usedMinutes,
-    includedMinutes,
-    buildCount,
-    activeBuilds,
-    queuedBuilds,
+    billedCost,
+    effectiveCost,
+    chargeCount,
+    serviceCount,
+    projectName,
+    rangeDays,
+    currency,
     updatedAt: payload?.lastUpdatedAt || payload?.updatedAt || "",
     note:
       displayState === "connected"
-        ? `${payload?.periodLabel || "รอบบิลปัจจุบัน"} | API ต่อได้แล้ว แต่ยังไม่มีตัวหาร build minutes จากแพลนนี้`
+        ? `${payload?.periodLabel || `ย้อนหลัง ${rangeDays} วัน`} | API ต่อได้แล้ว แต่ยังไม่พบ charge ในช่วงเวลานี้`
         : payload?.periodLabel ||
           payload?.note ||
-          "ตัวนี้เช็ก build minutes ของ Netlify ไม่ได้วัดข้อมูล Firebase หรือโควตา Firestore",
+          "ตัวนี้เช็ก usage และ cost ของ Vercel ไม่ได้วัดข้อมูล Firebase หรือโควตา Firestore",
   };
 }
 
-function renderAdminNetlifyUsage() {
-  const usage = store.netlifyUsage;
+function renderAdminUsage() {
+  const usage = store.adminUsage;
   setText("[data-admin-netlify-label]", usage.label);
   setText("[data-admin-netlify-detail]", usage.detail);
   setText(
     "[data-admin-netlify-builds]",
-    `Builds ${formatAdminNumber(usage.buildCount)} | Active ${formatAdminNumber(usage.activeBuilds)} | Queue ${formatAdminNumber(usage.queuedBuilds)}`
+    `${usage.projectName ? `Project ${usage.projectName} | ` : ""}Charges ${formatAdminNumber(usage.chargeCount)} | Services ${formatAdminNumber(usage.serviceCount)}`
   );
   setText(
     "[data-admin-netlify-updated]",
@@ -4693,18 +5241,38 @@ function renderAdminNetlifyUsage() {
   const progress = document.querySelector("[data-admin-netlify-progress]");
   const progressValue = document.querySelector("[data-admin-netlify-progress-value]");
   if (progress) {
-    const cappedPercent = clamp(Number(usage.percent || 0), 0, 100);
+    const rawWidth = usage.projectName ? Number(usage.percent || 0) : usage.status === "error" || usage.status === "missing-config" ? 0 : 100;
+    const cappedPercent = clamp(rawWidth, 0, 100);
     progress.style.width = `${cappedPercent}%`;
     progress.classList.remove("is-warning", "is-danger");
-    if (usage.status === "danger") {
+    if (usage.projectName && cappedPercent >= 90) {
       progress.classList.add("is-danger");
-    } else if (usage.status === "warning") {
+    } else if (usage.projectName && cappedPercent >= 75) {
       progress.classList.add("is-warning");
     }
   }
   if (progressValue) {
-    const rawPercent = Number(usage.percent || 0);
-    progressValue.textContent = usage.status === "connected" ? "N/A" : Number.isFinite(rawPercent) && rawPercent > 0 ? `${Math.round(rawPercent)}%` : "0%";
+    if (usage.projectName && Number.isFinite(Number(usage.percent || 0)) && Number(usage.percent || 0) > 0) {
+      progressValue.textContent = `${Math.round(Number(usage.percent || 0))}% team`;
+    } else {
+      progressValue.textContent = `${formatAdminNumber(usage.rangeDays || 30)}d`;
+    }
+  }
+}
+
+function formatAdminCurrency(value, currency = "USD") {
+  const amount = Number(value || 0);
+  const safeCurrency = String(currency || "USD").trim().toUpperCase() || "USD";
+
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: safeCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch (error) {
+    return `${safeCurrency} ${amount.toFixed(2)}`;
   }
 }
 
@@ -4897,6 +5465,7 @@ async function importPumpRadarStationsV3() {
     const selectionLabel = describeProvinceImportSelection(selection);
     setMessage(messageBox, `Importing ${stationEntries.length} stations from ${selectionLabel}...`);
     await writeDocsInBatches(appSettings.collections.stations, stationEntries);
+    syncImportedStationsInAdminStore(stationEntries);
     setMessage(
       messageBox,
       `Imported ${stationEntries.length} stations from ${selection.payloads.length} province payloads (${selectionLabel}).${getAdminImportSourceSuccessNote()}`

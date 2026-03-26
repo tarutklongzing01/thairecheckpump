@@ -47,6 +47,14 @@ body {
     linear-gradient(155deg, #08131d 0%, #071923 46%, #051018 100%);
 }
 
+body[data-page="admin"] {
+  --container: 1440px;
+}
+
+body[data-page="github-upload"] {
+  --container: 1320px;
+}
+
 body::before {
   content: "";
   position: fixed;
@@ -427,8 +435,8 @@ img {
 
 .admin-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 0.88fr) minmax(0, 1.12fr);
-  gap: 18px;
+  grid-template-columns: minmax(420px, 0.92fr) minmax(560px, 1.08fr);
+  gap: 24px;
   align-items: start;
 }
 
@@ -579,7 +587,11 @@ img {
   gap: 12px;
   max-height: min(76vh, 820px);
   overflow: auto;
-  padding-right: 6px;
+  padding-right: 10px;
+  padding-bottom: 4px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.58) rgba(255, 255, 255, 0.04);
 }
 
 .admin-report-list {
@@ -587,13 +599,18 @@ img {
   gap: 12px;
   max-height: min(76vh, 820px);
   overflow: auto;
-  padding-right: 6px;
+  padding-right: 10px;
+  padding-bottom: 4px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.58) rgba(255, 255, 255, 0.04);
 }
 
 .admin-station-row {
   position: relative;
   overflow: hidden;
   width: 100%;
+  min-width: 0;
   display: grid;
   gap: 10px;
   padding: 18px;
@@ -612,6 +629,7 @@ img {
   position: relative;
   overflow: hidden;
   width: 100%;
+  min-width: 0;
   display: grid;
   gap: 10px;
   padding: 18px;
@@ -667,19 +685,57 @@ img {
 .admin-station-row strong {
   font-size: 1.02rem;
   line-height: 1.3;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .admin-report-row strong {
   font-size: 1rem;
   line-height: 1.32;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .admin-station-row-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-station-row-head > * {
+  min-width: 0;
+}
+
+.admin-station-row-head .brand-badge {
+  justify-self: start;
+}
+
+.admin-station-row-head .tiny-badge,
+.admin-station-row-head .status-badge {
+  max-width: 100%;
+  justify-self: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-station-list::-webkit-scrollbar,
+.admin-report-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.admin-station-list::-webkit-scrollbar-track,
+.admin-report-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.admin-station-list::-webkit-scrollbar-thumb,
+.admin-report-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid rgba(7, 20, 30, 0.35);
+  background: linear-gradient(180deg, rgba(15, 194, 192, 0.7), rgba(255, 123, 50, 0.6));
 }
 
 .admin-actions {
@@ -718,7 +774,9 @@ img {
 }
 
 .admin-form-toolbar .admin-actions {
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-content: stretch;
   padding: 14px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -728,7 +786,9 @@ img {
 }
 
 .admin-form-toolbar .button {
-  flex: 1 1 180px;
+  width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 
 .admin-fuel-grid {
@@ -830,6 +890,66 @@ textarea:disabled {
   display: grid;
   grid-template-columns: 1.1fr 1.1fr 0.8fr;
   gap: 18px;
+}
+
+.home-fuel-price-section {
+  padding-top: 0;
+}
+
+.home-fuel-price-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.home-fuel-price-header {
+  align-items: flex-start;
+}
+
+.home-fuel-price-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-fuel-price-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(8, 20, 30, 0.82);
+}
+
+.home-fuel-price-card.is-active {
+  border-color: rgba(15, 194, 192, 0.34);
+  background:
+    linear-gradient(180deg, rgba(15, 194, 192, 0.16), rgba(15, 194, 192, 0.05)),
+    rgba(8, 24, 34, 0.9);
+}
+
+.home-fuel-price-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.home-fuel-price-card strong {
+  font-size: 1.04rem;
+  line-height: 1.35;
+}
+
+.home-fuel-price-value {
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.home-fuel-price-card small {
+  color: var(--muted);
 }
 
 .chip-set {
@@ -1911,6 +2031,10 @@ input[type="file"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .home-fuel-price-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .feed-list {
     grid-template-columns: 1fr;
   }
@@ -1991,6 +2115,7 @@ input[type="file"] {
   .metric-grid,
   .strip-grid,
   .stat-strip,
+  .home-fuel-price-grid,
   .admin-fuel-grid,
   .gallery-grid,
   .form-grid {
@@ -2068,5 +2193,486 @@ input[type="file"] {
   .admin-form-toolbar .button {
     flex-basis: 100%;
     width: 100%;
+  }
+}
+
+.admin-page-shell {
+  display: grid;
+  gap: 32px;
+  padding-bottom: 56px;
+}
+
+.admin-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.admin-hero-panel,
+.admin-hero-sidebar,
+.admin-auth-panel,
+.admin-section-panel,
+.admin-queue-panel,
+.admin-editor-panel {
+  background:
+    radial-gradient(circle at 82% 14%, rgba(15, 194, 192, 0.16), transparent 24%),
+    radial-gradient(circle at 0% 100%, rgba(255, 123, 50, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%),
+    var(--surface);
+}
+
+.admin-hero-panel {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-hero-head,
+.admin-anchor-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-hero-chip {
+  background: rgba(15, 194, 192, 0.12);
+  border: 1px solid rgba(15, 194, 192, 0.22);
+  color: #d7fffe;
+}
+
+.admin-guide-grid-wide {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-guide-grid-mission {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-summary-stack,
+.admin-context-column,
+.admin-editor-shell,
+.admin-sidebar-tools,
+.admin-list-shell,
+.admin-callout-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-sidebar-head,
+.admin-worknote-head,
+.admin-fieldset-head {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-sidebar-head h2,
+.admin-worknote-head h3,
+.admin-fieldset-head h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.3;
+}
+
+.admin-sidebar-head p,
+.admin-worknote-head p,
+.admin-fieldset-head p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.admin-sidebar-head-tight {
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-auth-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(280px, 0.84fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-worknote,
+.admin-callout,
+.admin-fieldset {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(7, 20, 30, 0.72);
+}
+
+.admin-callout strong,
+.admin-worknote strong {
+  font-size: 1rem;
+}
+
+.admin-bullet-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  line-height: 1.62;
+}
+
+.admin-section-panel {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-section-header {
+  margin-bottom: 0;
+}
+
+.admin-section-shell {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.admin-import-grid.admin-primary-form {
+  align-content: start;
+}
+
+.admin-import-grid textarea {
+  min-height: 360px;
+}
+
+.admin-workbench {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.82fr) minmax(0, 1.18fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.admin-queue-panel,
+.admin-editor-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-list-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-station-row,
+.admin-report-row {
+  gap: 12px;
+  padding: 20px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.admin-station-row:hover,
+.admin-report-row:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.admin-station-row.is-active,
+.admin-report-row.is-active {
+  border-color: rgba(15, 194, 192, 0.42);
+  background:
+    linear-gradient(180deg, rgba(15, 194, 192, 0.18), rgba(15, 194, 192, 0.08)),
+    rgba(9, 36, 41, 0.84);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+}
+
+.admin-form-intro-rich {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(7, 20, 30, 0.78);
+}
+
+.admin-editor-form {
+  gap: 18px;
+}
+
+.admin-fieldset-grid,
+.admin-fieldset-grid-tight {
+  gap: 16px;
+}
+
+.admin-fuel-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-fuel-field {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
+    rgba(10, 24, 36, 0.8);
+}
+
+.admin-fuel-field span {
+  margin-bottom: 2px;
+}
+
+.admin-form-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-form .message-box,
+.admin-import-grid .message-box {
+  border-color: rgba(15, 194, 192, 0.16);
+  background: rgba(15, 194, 192, 0.08);
+}
+
+.github-upload-hero-grid,
+.github-upload-shell,
+.github-upload-form,
+.github-upload-files,
+.github-upload-file-card,
+.github-upload-summary-panel,
+.github-upload-log-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.github-upload-hero-grid {
+  align-items: start;
+}
+
+.github-upload-shell {
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.72fr);
+  align-items: start;
+}
+
+.github-upload-form {
+  align-items: start;
+}
+
+.github-upload-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.github-upload-files {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.github-upload-file-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015)),
+    rgba(7, 20, 30, 0.78);
+}
+
+.github-upload-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.github-upload-card-head p,
+.github-upload-log-panel p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.github-upload-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.github-upload-warning {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 209, 102, 0.22);
+  background: rgba(255, 209, 102, 0.08);
+  color: #ffe8b3;
+  line-height: 1.7;
+}
+
+.github-upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.github-upload-token-actions {
+  margin-top: 6px;
+}
+
+.github-upload-remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.github-upload-remember input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.github-upload-result {
+  min-height: 24px;
+}
+
+.github-upload-result a {
+  color: #ffd166;
+  text-decoration: underline;
+}
+
+.github-upload-log-panel {
+  position: sticky;
+  top: 116px;
+}
+
+.github-upload-log {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.github-upload-log li + li {
+  margin-top: 10px;
+}
+
+.github-upload-log li.is-error {
+  color: #ffd8d8;
+}
+
+.github-upload-log li.is-success {
+  color: #d8ffe0;
+}
+
+#admin-import,
+#admin-stations,
+#admin-reports {
+  scroll-margin-top: 120px;
+}
+
+@media (max-width: 1280px) {
+  .admin-hero-grid,
+  .admin-section-shell,
+  .admin-workbench,
+  .github-upload-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-guide-grid-mission {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .github-upload-files,
+  .github-upload-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+    top: auto;
+  }
+
+  .github-upload-log-panel {
+    position: static;
+  }
+
+  .admin-auth-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-guide-grid-wide,
+  .admin-guide-grid-mission,
+  .admin-guide-grid-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-anchor-strip,
+  .admin-list-topline,
+  .github-upload-actions,
+  .github-upload-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-anchor-strip .button,
+  .admin-command-links-wide .button,
+  .github-upload-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-fuel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-page-shell {
+    gap: 24px;
+    padding-bottom: 40px;
+  }
+
+  .admin-hero-panel,
+  .admin-hero-sidebar,
+  .admin-auth-panel,
+  .admin-section-panel,
+  .admin-queue-panel,
+  .admin-editor-panel {
+    padding: 20px;
+  }
+
+  .admin-guide-grid-wide,
+  .admin-guide-grid-mission,
+  .admin-guide-grid-compact,
+  .admin-fuel-grid,
+  .admin-fieldset-grid,
+  .admin-fieldset-grid-tight {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-toolbar .admin-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-import-grid textarea {
+    min-height: 280px;
+  }
+
+  .admin-worknote,
+  .admin-callout,
+  .admin-fieldset {
+    padding: 16px;
   }
 }

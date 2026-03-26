@@ -6,7 +6,7 @@
     <title>Admin | Thairecheckpump</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css?v=20260325-1" />
-    <script type="module" src="firebase-app.js?v=20260325-1"></script>
+    <script type="module" src="firebase-app.js?v=20260326-3"></script>
   </head>
   <body data-page="admin">
     <div class="site-shell">
@@ -16,7 +16,7 @@
             <span class="brand-mark"></span>
             <span class="brand-copy">
               <strong>Thairecheckpump</strong>
-              <small>หลังบ้านแก้ไขข้อมูลสถานี</small>
+              <small>Control room สำหรับจัดการสถานี รายงาน และการนำเข้าข้อมูล</small>
             </span>
           </a>
           <nav class="nav-list" aria-label="เมนูหลัก">
@@ -41,34 +41,72 @@
               <span class="tiny-badge" data-location-state>Location: -</span>
             </div>
             <div class="status-cluster">
-              <span class="muted" data-live-hint>หน้าหลังบ้านนี้จะแก้ไขข้อมูลคอลเลกชัน stations โดยตรงบน Firestore</span>
+              <span class="muted" data-live-hint>จัดการข้อมูลคอลเลกชัน `stations` และ `reports` บน Firestore จากหน้าเดียว</span>
             </div>
           </div>
         </div>
       </header>
-
       <main>
         <section class="page-hero">
-          <div class="container dashboard-top-grid admin-top-grid">
-            <div class="panel section-reveal">
-              <span class="eyebrow">Admin</span>
-              <h1 class="subheadline">หลังบ้านแก้ไขข้อมูลสถานี</h1>
+          <div class="container admin-hero-grid">
+            <section class="panel section-reveal admin-hero-panel">
+              <div class="admin-hero-head">
+                <span class="eyebrow">Control Room</span>
+                <span class="tiny-badge admin-hero-chip">Live Firestore Admin</span>
+              </div>
+              <h1 class="subheadline">หลังบ้านที่รวมการนำเข้า แก้ไขสถานี และดูคิวรายงานไว้ใน flow เดียว</h1>
               <p class="lede">
-                เลือกสถานีจากรายการด้านซ้าย หรือสร้างสถานีใหม่ แล้วแก้ชื่อปั๊ม แบรนด์ พื้นที่ พิกัด จำนวนรายงาน และสถานะน้ำมันแต่ละชนิดได้ทันที
+                หน้านี้ออกแบบให้ตัดสินใจเร็วขึ้น: เห็นสถานะระบบด้านบน, กระโดดไปยัง import ได้ทันที, เลือกคิวงานจาก rail ด้านซ้าย,
+                แล้วแก้ข้อมูลจริงใน editor ที่แยกเป็นหมวดชัดเจนโดยไม่ต้องไล่หาช่องกรอกยาวทั้งหน้า
               </p>
-            </div>
-            <div class="panel section-reveal delay-1 admin-summary-panel">
+              <div class="admin-anchor-strip">
+                <a class="button button-primary" href="#admin-import">เปิด Import Console</a>
+                <a class="button button-outline" href="#admin-stations">จัดการ Stations</a>
+                <a class="button button-outline" href="#admin-reports">ตรวจ Reports</a>
+              </div>
+              <div class="admin-guide-grid admin-guide-grid-wide">
+                <article class="admin-guide-card admin-guide-card-soft">
+                  <span class="tiny-badge">01. Snapshot</span>
+                  <h3>ดู health ก่อนแก้ข้อมูล</h3>
+                  <p>เช็ก auth, write access, Firebase health และ usage ให้ครบก่อนเริ่มแก้หรือนำเข้าข้อมูลรอบใหม่</p>
+                </article>
+                <article class="admin-guide-card admin-guide-card-soft">
+                  <span class="tiny-badge">02. Ingest</span>
+                  <h3>ดึงข้อมูลได้ทั้งตรงและจากไฟล์</h3>
+                  <p>รองรับทั้งการดึงผ่าน proxy, โหลดไฟล์ JSON จากเครื่อง, หรือวาง payload ตรงเพื่อทดสอบการนำเข้า</p>
+                </article>
+                <article class="admin-guide-card admin-guide-card-soft">
+                  <span class="tiny-badge">03. Triage</span>
+                  <h3>คิวงานอยู่ข้างซ้ายทั้งหมด</h3>
+                  <p>ค้นหาชื่อปั๊ม แบรนด์ พื้นที่ หรือ ID แล้วเลือก record ที่ต้องแก้โดยไม่หลุดออกจากหน้าหลัก</p>
+                </article>
+                <article class="admin-guide-card admin-guide-card-soft">
+                  <span class="tiny-badge">04. Commit</span>
+                  <h3>แก้เป็นหมวดและบันทึกจบในแผงเดียว</h3>
+                  <p>editor แยกข้อมูลพื้นฐาน พิกัด รูปภาพ และสถานะน้ำมันเพื่อให้ review ก่อน save ได้ง่ายขึ้น</p>
+                </article>
+              </div>
+            </section>
+
+            <aside class="panel section-reveal delay-1 admin-summary-panel admin-hero-sidebar">
+              <div class="admin-sidebar-head admin-sidebar-head-tight">
+                <div>
+                  <span class="eyebrow">Ops Status</span>
+                  <h2>สถานะระบบสำหรับรอบแก้ไขนี้</h2>
+                </div>
+                <p>มุมนี้ไว้ดูความพร้อมก่อนลงมือจริง ทั้งสิทธิ์การเขียน, health ของ Firebase, และค่าใช้งาน backend</p>
+              </div>
               <div class="stat-strip admin-stat-grid">
                 <div class="stat-card admin-stat-card">
                   <span>สถานี</span>
                   <strong data-admin-count>0</strong>
                 </div>
                 <div class="stat-card admin-stat-card">
-                  <span>โหมด</span>
+                  <span>โหมดข้อมูล</span>
                   <strong data-admin-mode>-</strong>
                 </div>
                 <div class="stat-card admin-stat-card">
-                  <span>ยืนยันตัวตน</span>
+                  <span>การยืนยันตัวตน</span>
                   <strong data-admin-auth>-</strong>
                 </div>
                 <div class="stat-card admin-stat-card">
@@ -78,7 +116,7 @@
                 <div class="stat-card admin-stat-card">
                   <span>Firebase Health</span>
                   <strong data-admin-firebase-health>-</strong>
-                  <small data-admin-firebase-detail>กำลังตรวจสอบ Firebase</small>
+                  <small data-admin-firebase-detail>กำลังตรวจสอบการเชื่อมต่อ Firebase</small>
                 </div>
                 <div class="stat-card admin-stat-card">
                   <span>Last Error</span>
@@ -88,7 +126,7 @@
                 <div class="stat-card admin-stat-card admin-netlify-card">
                   <span>Vercel Usage</span>
                   <strong data-admin-netlify-label>-</strong>
-                  <small data-admin-netlify-detail>กำลังตรวจสอบ usage และ cost ของ Vercel</small>
+                  <small data-admin-netlify-detail>กำลังโหลด usage และ cost ของโปรเจกต์</small>
                   <div class="admin-progress-track" aria-hidden="true">
                     <div class="admin-progress-fill" data-admin-netlify-progress></div>
                   </div>
@@ -96,388 +134,523 @@
                     <span data-admin-netlify-builds>Charges -</span>
                     <span data-admin-netlify-progress-value>-</span>
                   </div>
-                  <small data-admin-netlify-updated>ยังไม่มีเวลาล่าสุด</small>
+                  <small data-admin-netlify-updated>ยังไม่มีข้อมูลเวลาล่าสุด</small>
                 </div>
               </div>
-              <p class="admin-summary-note" data-admin-summary-note>ต้องเชื่อม Firestore และมี auth ก่อนบันทึกการแก้ไขข้อมูล</p>
-              <p class="admin-summary-note" data-admin-netlify-note>ตัวนี้ไว้ดู usage และ cost ของ Vercel จากฝั่งแอดมิน</p>
-            </div>
+              <div class="admin-summary-stack">
+                <p class="admin-summary-note" data-admin-summary-note>ต้องเชื่อม Firestore และมีสิทธิ์เขียนก่อนบันทึกการแก้ไขข้อมูล</p>
+                <p class="admin-summary-note" data-admin-netlify-note>usage ตรงนี้ใช้ดูแนวโน้มค่าใช้จ่ายหลังรัน import หรือใช้งาน backend หนัก ๆ</p>
+              </div>
+            </aside>
           </div>
         </section>
-
         <section class="section" data-admin-auth-gate>
           <div class="container">
-            <section class="panel panel-muted section-reveal delay-1 auth-gate" data-auth-gate>
-              <span class="eyebrow">Admin Access</span>
-              <h2 data-admin-auth-title>เข้าสู่ระบบด้วย Google ก่อนเข้า admin</h2>
-              <p class="lede" data-admin-auth-copy>หน้านี้ใช้สำหรับแก้ข้อมูลสถานีและรายงานโดยตรงบน Firestore จึงซ่อนจากเมนู public และเปิดให้เฉพาะผู้ที่ล็อกอินก่อน</p>
+            <section class="panel panel-muted section-reveal delay-1 auth-gate admin-auth-panel" data-auth-gate>
+              <div class="admin-auth-layout">
+                <div>
+                  <span class="eyebrow">Admin Access</span>
+                  <h2 data-admin-auth-title>เข้าสู่ระบบด้วย Google ก่อนเข้า admin</h2>
+                  <p class="lede" data-admin-auth-copy>
+                    หน้านี้ใช้แก้ข้อมูลสถานีและรายงานบน Firestore โดยตรง จึงเปิดเฉพาะบัญชีที่ผ่านการยืนยันตัวตนและมีสิทธิ์ใช้งานหลังบ้าน
+                  </p>
+                </div>
+                <div class="admin-callout">
+                  <strong>ก่อนเข้าหน้านี้ควรพร้อม</strong>
+                  <ul class="admin-bullet-list">
+                    <li>Firebase config ถูกต้องและโหลดได้จริง</li>
+                    <li>บัญชี Google อยู่ใน allowlist ของ admin</li>
+                    <li>กฎ Firestore อนุญาตให้เขียน collection ที่เกี่ยวข้อง</li>
+                  </ul>
+                </div>
+              </div>
               <div class="message-box" aria-live="polite" data-auth-message data-admin-auth-message></div>
             </section>
           </div>
         </section>
-
         <div data-admin-content class="admin-page-shell">
-        <section class="section admin-quick-section">
-          <div class="container">
-            <section class="panel section-reveal delay-1 admin-command-panel">
-              <div class="admin-command-head">
-                <div>
-                  <span class="eyebrow">Workflow</span>
-                  <h2>ทางลัดสำหรับงานหลังบ้าน</h2>
-                  <p>ดูสถานะด้านบนก่อน จากนั้นนำเข้าข้อมูล ค้นหารายการฝั่งซ้าย แล้วค่อยแก้ไขและบันทึกจากฟอร์มฝั่งขวา</p>
-                </div>
-                <div class="admin-command-links">
-                  <a class="button button-outline" href="#admin-import">Import</a>
-                  <a class="button button-outline" href="#admin-stations">Stations</a>
-                  <a class="button button-outline" href="#admin-reports">Reports</a>
-                </div>
-              </div>
-              <div class="admin-guide-grid">
-                <article class="admin-guide-card">
-                  <span class="tiny-badge">1. Access</span>
-                  <h3>ตรวจสิทธิ์ก่อนแก้</h3>
-                  <p>เช็กโหมด, สิทธิ์เขียน, และ Firebase health ด้านบนก่อนเริ่มแก้ข้อมูลจริงทุกครั้ง</p>
-                </article>
-                <article class="admin-guide-card">
-                  <span class="tiny-badge">2. Import</span>
-                  <h3>มือถือก็ดึงได้</h3>
-                  <p>ถ้าไม่มีไฟล์ JSON ในเครื่องให้ใช้ปุ่มดึงตรงหรือดึงแล้วนำเข้าได้ทันทีจากหน้าหลังบ้าน</p>
-                </article>
-                <article class="admin-guide-card">
-                  <span class="tiny-badge">3. Review</span>
-                  <h3>คิวซ้าย ฟอร์มขวา</h3>
-                  <p>รายการค้นหาอยู่ฝั่งซ้าย ส่วนรายละเอียดและปุ่มบันทึกถูกเก็บไว้ฝั่งขวาเพื่อลดการสับสนเวลาใช้งาน</p>
-                </article>
-              </div>
-            </section>
-          </div>
-        </section>
-        <section class="section" id="admin-import">
-          <div class="container">
-            <section class="panel section-reveal delay-1 admin-panel-elevated">
-              <div class="section-header">
-                <div>
-                  <span class="eyebrow">Import</span>
-                  <h2>นำเข้าข้อมูลจาก PumpRadar</h2>
-                  <p>
-                    ใช้ JSON จาก `https://thaipumpradar.com/api/provinces/&lt;province-slug&gt;/stations` แล้วนำเข้าเป็น `stations` ใน Firestore โดยใช้ `station.id`
-                    เป็น Document ID ระบบจะสร้าง `fuelStates`, `reportCount`, `updatedAt` และ metadata พื้นฐานให้พร้อมใช้งานกับหน้าแผนที่ทันที
-                  </p>
-                </div>
-              </div>
-
-              <div class="admin-guide-grid admin-guide-grid-compact">
-                <article class="admin-guide-card admin-guide-card-soft">
-                  <span class="brand-badge">Mobile</span>
-                  <h3>ดึงแล้วนำเข้า</h3>
-                  <p>เหมาะกับการอัปเดตจากมือถือหรือเวลาที่ไม่มีไฟล์ JSON อยู่ในเครื่อง</p>
-                </article>
-                <article class="admin-guide-card admin-guide-card-soft">
-                  <span class="brand-badge">JSON</span>
-                  <h3>วางหรืออัปโหลดก่อน</h3>
-                  <p>เหมาะเวลาต้องการตรวจ payload ก่อน import หรือมีไฟล์รวมหลายจังหวัดอยู่แล้ว</p>
-                </article>
-                <article class="admin-guide-card admin-guide-card-soft">
-                  <span class="brand-badge">Source</span>
-                  <h3>เช็กผลลัพธ์หน้า public</h3>
-                  <p>ถ้า public ยังใช้ Static JSON อยู่ การ import รอบนี้จะอัปเดตใน Firestore ก่อน</p>
-                </article>
-              </div>
-
-              <div class="form-grid admin-import-grid">
-                <label class="field">
-                  <span>Province Slug</span>
-                  <select class="input" data-admin-import-province></select>
-                  <small class="muted">เลือกจังหวัดจาก dropdown แล้วระบบจะใช้ slug นี้กับทั้ง download และ import</small>
-                </label>
-
-                <div class="field">
-                  <span>ดาวน์โหลด JSON</span>
-                  <div class="admin-actions">
-                    <button class="button button-outline" type="button" data-admin-import-download>ดาวน์โหลด JSON จังหวัดนี้</button>
-                    <button class="button button-outline" type="button" data-admin-import-fetch>ดึง JSON ตรง</button>
-                    <button class="button button-primary" type="button" data-admin-import-fetch-submit>ดึงแล้วนำเข้า</button>
+          <section class="section admin-quick-section">
+            <div class="container">
+              <section class="panel section-reveal delay-1 admin-command-panel">
+                <div class="admin-command-head">
+                  <div>
+                    <span class="eyebrow">Mission Board</span>
+                    <h2>Workflow ของทีมหลังบ้าน</h2>
+                    <p>เริ่มจาก snapshot สถานะ, เลือกวิธี ingest, แล้วเข้าสู่คิวงานของสถานีหรือรายงานโดยไม่ต้องสลับหน้าหรือเปลี่ยนบริบท</p>
                   </div>
-                  <small class="muted">ปุ่มนี้จะเปิด API ของ PumpRadar ในแท็บใหม่ แล้วค่อยบันทึกไฟล์เป็น `.json`</small>
-                  <small class="muted">ปุ่มดึงตรงและดึงแล้วนำเข้าใช้ได้ทั้งมือถือและคอมผ่าน backend function ของเว็บ ถ้าขึ้น 404 แปลว่ายังไม่ได้ deploy ฟังก์ชันขึ้น Vercel หรือไม่ได้เปิดผ่าน vercel dev</small>
-                </div>
-
-                <label class="field field-full">
-                  <span>PumpRadar Proxy URL</span>
-                  <input
-                    class="input"
-                    type="text"
-                    placeholder="https://your-site.com/api/pumpradar-province"
-                    data-admin-import-proxy
-                  />
-                  <small class="muted">ปล่อยว่างไว้เพื่อใช้ endpoint มาตรฐานของเว็บนี้ ถ้าเปิด admin จาก localhost, file:// หรือโดเมนอื่น ให้ใส่ URL ของ backend function ที่ deploy แล้ว</small>
-                </label>
-
-                <label class="field field-full">
-                  <span>ไฟล์ JSON</span>
-                  <input class="input" type="file" accept=".json,application/json" data-admin-import-file />
-                  <small class="muted">รองรับไฟล์รวมหลายจังหวัดจาก <code>tools/fetch-pumpradar-provinces.ps1</code> และจะกรองตาม Province Slug ตอน import</small>
-                  <small class="muted">ถ้าดึงจากเว็บตรงไม่ได้ ให้โหลด JSON ลงเครื่องก่อนแล้วเลือกไฟล์ที่นี่</small>
-                </label>
-
-                <label class="field field-full">
-                  <span>หรือวาง JSON จาก PumpRadar</span>
-                  <textarea
-                    name="pumpradarJson"
-                    placeholder='{"province":"ชลบุรี","stations":[...]}'
-                    data-admin-import-json
-                  ></textarea>
-                </label>
-
-                <div class="field field-full admin-form-toolbar">
-                  <div class="admin-actions">
-                    <button class="button button-primary" type="button" data-admin-import-submit>Import Stations</button>
-                    <button class="button button-outline" type="button" data-admin-import-reset>ล้างข้อมูล</button>
+                  <div class="admin-command-links admin-command-links-wide">
+                    <a class="button button-outline" href="#admin-import">Import Console</a>
+                    <a class="button button-outline" href="#admin-stations">Station Workbench</a>
+                    <a class="button button-outline" href="#admin-reports">Report Workbench</a>
                   </div>
-                  <small class="muted" data-admin-import-source-note>กำลังตรวจสอบ source ของสถานี</small>
                 </div>
-
-                <div class="message-box field-full" aria-live="polite" data-admin-import-message></div>
-              </div>
-            </section>
-          </div>
-        </section>
-
-        <section class="section" id="admin-stations">
-          <div class="container admin-layout">
-            <aside class="panel section-reveal delay-2 admin-sidebar">
-              <div class="section-header">
-                <div>
-                  <span class="eyebrow">Stations</span>
-                  <h2>เลือกรายการที่ต้องการแก้ไข</h2>
+                <div class="admin-guide-grid admin-guide-grid-mission">
+                  <article class="admin-guide-card">
+                    <span class="tiny-badge">Access</span>
+                    <h3>ยืนยันสิทธิ์ก่อนทุกครั้ง</h3>
+                    <p>ถ้า write access หรือ Firebase health ยังไม่พร้อม ให้หยุดที่จุดนี้ก่อนเพื่อลดการแก้ข้อมูลไม่สำเร็จ</p>
+                  </article>
+                  <article class="admin-guide-card">
+                    <span class="tiny-badge">Import</span>
+                    <h3>เลือก source ให้เหมาะกับงาน</h3>
+                    <p>มือถือใช้ fetch ผ่าน backend ได้เลย ส่วนงานตรวจ payload ลึก ๆ เหมาะกับไฟล์หรือ textarea มากกว่า</p>
+                  </article>
+                  <article class="admin-guide-card">
+                    <span class="tiny-badge">Stations</span>
+                    <h3>แก้ข้อมูล canonical ของสถานี</h3>
+                    <p>ใช้สำหรับปรับชื่อปั๊ม แบรนด์ พื้นที่ พิกัด รูปภาพ และสถานะน้ำมันหลักที่ public page จะอ้างอิง</p>
+                  </article>
+                  <article class="admin-guide-card">
+                    <span class="tiny-badge">Reports</span>
+                    <h3>คัดกรองข้อมูลที่ผู้ใช้ส่งเข้ามา</h3>
+                    <p>เลือกแก้รายการผิด เปลี่ยนสถานะ ย้าย stationId หรือเก็บ note เพิ่มเติมก่อน sync กลับระบบ</p>
+                  </article>
                 </div>
-              </div>
-              <div class="admin-side-note">
-                <span class="tiny-badge">Station Queue</span>
-                <p>ค้นหาจากชื่อ แบรนด์ พื้นที่ หรือ Document ID แล้วเลือกจากคิวด้านล่างเพื่อโหลดฟอร์มแก้ไข</p>
-              </div>
-              <label class="field field-full">
-                <span>ค้นหาจากชื่อปั๊ม แบรนด์ พื้นที่ หรือ Document ID</span>
-                <input class="input" type="search" placeholder="เช่น ปตท. บางนา" data-admin-search />
-              </label>
-              <div class="admin-actions">
-                <button class="button button-primary" type="button" data-admin-new>สร้างสถานีใหม่</button>
-              </div>
-              <div class="admin-station-list" data-admin-list></div>
-            </aside>
-
-            <section class="panel section-reveal delay-3 admin-panel-elevated">
-              <div class="section-header">
-                <div>
-                  <span class="eyebrow">Editor</span>
-                  <h2 data-admin-form-title>เลือกสถานีเพื่อแก้ไข</h2>
-                  <p data-admin-form-hint>เลือกสถานีจากรายการด้านซ้าย หรือกดสร้างสถานีใหม่</p>
-                </div>
-              </div>
-
-              <div class="admin-form-intro">
-                <span class="tiny-badge">Station Editor</span>
-                <p>รวมข้อมูลหลักของสถานี พิกัด รูป และสถานะเชื้อเพลิงไว้ในแผงเดียวเพื่อให้ตัดสินใจและบันทึกได้เร็วขึ้น</p>
-              </div>
-
-              <form class="form-grid admin-form" data-admin-form>
-                <input type="hidden" name="originalId" data-admin-original-id />
-
-                <label class="field">
-                  <span>Document ID</span>
-                  <input class="input" type="text" name="stationId" placeholder="ptt-bangna-km5" data-admin-station-id />
-                </label>
-
-                <label class="field">
-                  <span>ชื่อสถานี</span>
-                  <input class="input" type="text" name="name" placeholder="ปตท. บางนา กม.5" data-admin-name />
-                </label>
-
-                <label class="field">
-                  <span>แบรนด์</span>
-                  <input class="input" type="text" name="brand" placeholder="ปตท." data-admin-brand />
-                </label>
-
-                <label class="field">
-                  <span>พื้นที่</span>
-                  <input class="input" type="text" name="area" placeholder="บางนา" data-admin-area />
-                </label>
-
-                <label class="field">
-                  <span>Latitude</span>
-                  <input class="input" type="number" step="0.000001" name="latitude" placeholder="13.668000" data-admin-lat />
-                </label>
-
-                <label class="field">
-                  <span>Longitude</span>
-                  <input class="input" type="number" step="0.000001" name="longitude" placeholder="100.634000" data-admin-lng />
-                </label>
-
-                <label class="field">
-                  <span>จำนวนรายงานสะสม</span>
-                  <input class="input" type="number" min="0" step="1" name="reportCount" placeholder="0" data-admin-report-count />
-                </label>
-
-                <label class="field">
-                  <span>Photo URL</span>
-                  <input class="input" type="url" name="photoUrl" placeholder="https://..." data-admin-photo-url />
-                </label>
-
-                <div class="field field-full">
-                  <span>สถานะน้ำมันแต่ละชนิด</span>
-                  <div class="admin-fuel-grid" data-admin-fuel-grid></div>
-                </div>
-
-                <div class="field field-full admin-form-toolbar">
-                  <div class="admin-actions">
-                    <button class="button button-primary" type="submit" data-admin-save>บันทึกสถานี</button>
-                    <button class="button button-outline" type="button" data-admin-reset>รีเซ็ต</button>
-                    <button class="button button-danger" type="button" data-admin-delete>ลบสถานี</button>
+              </section>
+            </div>
+          </section>
+          <section class="section" id="admin-import">
+            <div class="container">
+              <section class="panel section-reveal delay-1 admin-panel-elevated admin-section-panel">
+                <div class="section-header admin-section-header">
+                  <div>
+                    <span class="eyebrow">Import Console</span>
+                    <h2>นำเข้าข้อมูลจาก PumpRadar แบบมี context ครบก่อนกด submit</h2>
+                    <p>รองรับทั้งการดึงข้อมูลสด, import จากไฟล์, และวาง JSON ตรงโดยใช้ `station.id` เป็น Document ID ใน `stations`</p>
                   </div>
                 </div>
 
-                <div class="message-box field-full" aria-live="polite" data-admin-message></div>
-              </form>
-            </section>
-          </div>
-        </section>
+                <div class="admin-section-shell admin-import-shell">
+                  <div class="admin-context-column">
+                    <div class="admin-worknote">
+                      <div class="admin-worknote-head">
+                        <span class="tiny-badge">Input Modes</span>
+                        <h3>เลือกวิธี ingest ตามสภาพแวดล้อมที่ใช้งาน</h3>
+                      </div>
+                      <div class="admin-guide-grid admin-guide-grid-compact">
+                        <article class="admin-guide-card admin-guide-card-soft">
+                          <span class="brand-badge">Mobile</span>
+                          <h3>ดึงแล้วนำเข้า</h3>
+                          <p>เหมาะกับการทำงานบนมือถือหรือเครื่องที่ไม่มีไฟล์ JSON เตรียมไว้ล่วงหน้า</p>
+                        </article>
+                        <article class="admin-guide-card admin-guide-card-soft">
+                          <span class="brand-badge">File</span>
+                          <h3>ตรวจ payload ก่อน import</h3>
+                          <p>เหมาะกับการ review ไฟล์หลายจังหวัดหรือ payload ที่ export มาจากสคริปต์ของโปรเจกต์</p>
+                        </article>
+                        <article class="admin-guide-card admin-guide-card-soft">
+                          <span class="brand-badge">Textarea</span>
+                          <h3>วางข้อมูลเพื่อทดลองทันที</h3>
+                          <p>ใช้กับการ debug, compare payload หรือแก้ JSON จุดเล็กก่อนอัปโหลดจริง</p>
+                        </article>
+                      </div>
+                    </div>
 
-        <section class="section" id="admin-reports">
-          <div class="container admin-layout">
-            <aside class="panel section-reveal delay-2 admin-sidebar">
-              <div class="section-header">
-                <div>
-                  <span class="eyebrow">Reports</span>
-                  <h2>จัดการรายงานที่ผู้ใช้ส่งมา</h2>
-                </div>
-              </div>
-              <div class="admin-side-note">
-                <span class="tiny-badge">Report Queue</span>
-                <p>ใช้คิวนี้สำหรับตรวจรายงานผิดพลาด เปลี่ยนสถานะ หรือย้ายรายงานไปยังสถานีที่ถูกต้องจากหน้าเดียว</p>
-              </div>
-              <label class="field field-full">
-                <span>ค้นหาจากชื่อปั๊ม ผู้รายงาน แบรนด์ หรือ Report ID</span>
-                <input class="input" type="search" placeholder="เช่น พัทยาใต้ หรือ NdfKzpJP" data-admin-report-search />
-              </label>
-              <div class="admin-report-list" data-admin-report-list></div>
-            </aside>
+                    <div class="admin-callout-grid">
+                      <article class="admin-callout">
+                        <strong>Checklist ก่อนกด Import</strong>
+                        <ul class="admin-bullet-list">
+                          <li>เลือกจังหวัดให้ตรงกับ payload ที่จะใช้</li>
+                          <li>ถ้าเปิดจาก localhost หรือโดเมนอื่น ให้ใส่ proxy URL ที่ deploy แล้ว</li>
+                          <li>ตรวจให้แน่ใจว่า source นี้คือรอบข้อมูลล่าสุดที่ต้องการใช้จริง</li>
+                        </ul>
+                      </article>
+                      <article class="admin-callout">
+                        <strong>ผลลัพธ์ที่ระบบจะสร้างให้</strong>
+                        <ul class="admin-bullet-list">
+                          <li>สร้าง `fuelStates` มาตรฐานสำหรับหน้า public</li>
+                          <li>เติม `reportCount`, `updatedAt` และ metadata ที่จำเป็น</li>
+                          <li>เขียนข้อมูลลง Firestore โดยอิง `station.id` ของต้นทาง</li>
+                        </ul>
+                      </article>
+                    </div>
+                  </div>
 
-            <section class="panel section-reveal delay-3 admin-panel-elevated">
-              <div class="section-header">
-                <div>
-                  <span class="eyebrow">Report Editor</span>
-                  <h2 data-admin-report-title>เลือกรายงานเพื่อแก้ไข</h2>
-                  <p data-admin-report-hint>เลือกรายงานจากรายการด้านซ้าย ระบบจะบันทึกกลับไปยัง Firestore และ sync สรุปของสถานีให้</p>
-                </div>
-              </div>
+                  <div class="form-grid admin-import-grid admin-primary-form">
+                    <label class="field">
+                      <span>Province Slug</span>
+                      <select class="input" data-admin-import-province></select>
+                      <small class="muted">เลือกจังหวัดจาก dropdown แล้วระบบจะใช้ slug นี้กับทั้งการดึงและการ import</small>
+                    </label>
 
-              <div class="admin-form-intro">
-                <span class="tiny-badge">Report Editor</span>
-                <p>แก้ชื่อสถานี ผู้รายงาน สถานะน้ำมัน พิกัด และรูปได้จากตรงนี้ แล้วระบบจะ sync ภาพรวมของสถานีให้อีกชั้น</p>
-              </div>
+                    <div class="field">
+                      <span>วิธีดึง JSON</span>
+                      <div class="admin-actions">
+                        <button class="button button-outline" type="button" data-admin-import-download>ดาวน์โหลด JSON จังหวัดนี้</button>
+                        <button class="button button-outline" type="button" data-admin-import-fetch>ดึง JSON ตรง</button>
+                        <button class="button button-primary" type="button" data-admin-import-fetch-submit>ดึงแล้วนำเข้า</button>
+                      </div>
+                      <small class="muted">ถ้า backend function ยังไม่พร้อม ปุ่ม fetch จะใช้ไม่ได้และควรสลับไปโหลดไฟล์ JSON เองแทน</small>
+                    </div>
 
-              <form class="form-grid admin-form" data-admin-report-form>
-                <input type="hidden" name="originalId" data-admin-report-original-id />
-                <input type="hidden" name="originalStationId" data-admin-report-original-station-id />
+                    <label class="field field-full">
+                      <span>PumpRadar Proxy URL</span>
+                      <input
+                        class="input"
+                        type="text"
+                        placeholder="https://your-site.com/api/pumpradar-province"
+                        data-admin-import-proxy
+                      />
+                      <small class="muted">ปล่อยว่างเพื่อใช้ endpoint มาตรฐานของเว็บนี้ หรือระบุ URL ของ backend function ที่ deploy แล้วเมื่อเปิดจากโดเมนอื่น</small>
+                    </label>
 
-                <label class="field">
-                  <span>Report ID</span>
-                  <input class="input" type="text" data-admin-report-id readonly />
-                </label>
+                    <label class="field field-full">
+                      <span>ไฟล์ JSON</span>
+                      <input class="input" type="file" accept=".json,application/json" data-admin-import-file />
+                      <small class="muted">รองรับไฟล์รวมหลายจังหวัดจาก `tools/fetch-pumpradar-provinces.ps1` และจะกรองตาม Province Slug ตอน import</small>
+                    </label>
 
-                <label class="field">
-                  <span>Station ID</span>
-                  <input class="input" type="text" name="stationId" placeholder="ptt-bangna-km5" data-admin-report-station-id />
-                </label>
+                    <label class="field field-full">
+                      <span>วาง JSON จาก PumpRadar</span>
+                      <textarea
+                        name="pumpradarJson"
+                        placeholder='{"province":"ชลบุรี","stations":[...]}'
+                        data-admin-import-json
+                      ></textarea>
+                    </label>
 
-                <label class="field">
-                  <span>ชื่อสถานี</span>
-                  <input class="input" type="text" name="station" placeholder="ปตท. บางนา กม.5" data-admin-report-station />
-                </label>
+                    <div class="field field-full admin-form-toolbar">
+                      <div class="admin-actions">
+                        <button class="button button-primary" type="button" data-admin-import-submit>Import Stations</button>
+                        <button class="button button-outline" type="button" data-admin-import-reset>ล้างข้อมูล</button>
+                      </div>
+                      <small class="muted" data-admin-import-source-note>กำลังตรวจสอบ source ของสถานี</small>
+                    </div>
 
-                <label class="field">
-                  <span>แบรนด์</span>
-                  <input class="input" type="text" name="brand" placeholder="ปตท." data-admin-report-brand />
-                </label>
-
-                <label class="field">
-                  <span>พื้นที่</span>
-                  <input class="input" type="text" name="area" placeholder="บางนา" data-admin-report-area />
-                </label>
-
-                <label class="field">
-                  <span>ผู้รายงาน</span>
-                  <input class="input" type="text" name="reporter" placeholder="ชื่อผู้ส่งรายงาน" data-admin-report-reporter />
-                </label>
-
-                <label class="field">
-                  <span>เชื้อเพลิง</span>
-                  <select name="fuel" data-admin-report-fuel>
-                    <option value="diesel">ดีเซล</option>
-                    <option value="gas91">แก๊สโซฮอล์ 91</option>
-                    <option value="gas95">แก๊สโซฮอล์ 95</option>
-                    <option value="e20">E20</option>
-                    <option value="e85">E85</option>
-                    <option value="lpg">LPG</option>
-                  </select>
-                </label>
-
-                <label class="field">
-                  <span>สถานะ</span>
-                  <select name="status" data-admin-report-status>
-                    <option value="high">พร้อมจ่าย</option>
-                    <option value="medium">เหลือน้อย</option>
-                    <option value="low">ใกล้หมด</option>
-                    <option value="empty">หมด</option>
-                    <option value="unknown">ยังไม่มีข้อมูล</option>
-                  </select>
-                </label>
-
-                <label class="field">
-                  <span>Latitude</span>
-                  <input class="input" type="number" step="0.000001" name="latitude" placeholder="13.668000" data-admin-report-lat />
-                </label>
-
-                <label class="field">
-                  <span>Longitude</span>
-                  <input class="input" type="number" step="0.000001" name="longitude" placeholder="100.634000" data-admin-report-lng />
-                </label>
-
-                <label class="field">
-                  <span>Photo URL</span>
-                  <input class="input" type="url" name="photoUrl" placeholder="https://..." data-admin-report-photo-url />
-                </label>
-
-                <label class="field">
-                  <span>Photo Path</span>
-                  <input class="input" type="text" name="photoPath" placeholder="reports/uid/file.jpg" data-admin-report-photo-path />
-                </label>
-
-                <label class="field field-full">
-                  <span>หมายเหตุ</span>
-                  <textarea name="note" placeholder="รายละเอียดเพิ่มเติมของรายงาน" data-admin-report-note></textarea>
-                </label>
-
-                <div class="field field-full admin-form-toolbar">
-                  <div class="admin-actions">
-                    <button class="button button-primary" type="submit" data-admin-report-save>บันทึกรายงาน</button>
-                    <button class="button button-outline" type="button" data-admin-report-reset>รีเซ็ต</button>
-                    <button class="button button-danger" type="button" data-admin-report-delete>ลบรายงาน</button>
+                    <div class="message-box field-full" aria-live="polite" data-admin-import-message></div>
                   </div>
                 </div>
+              </section>
+            </div>
+          </section>
+          <section class="section" id="admin-stations">
+            <div class="container">
+              <div class="admin-workbench">
+                <aside class="panel section-reveal delay-2 admin-sidebar admin-queue-panel">
+                  <div class="admin-sidebar-head">
+                    <div>
+                      <span class="eyebrow">Station Queue</span>
+                      <h2>เลือกสถานีที่ต้องแก้ไข</h2>
+                    </div>
+                    <p>ค้นหาจากชื่อ แบรนด์ พื้นที่ หรือ Document ID แล้วเลือก record ที่ต้องทำงานจากคิวนี้</p>
+                  </div>
 
-                <div class="message-box field-full" aria-live="polite" data-admin-report-message></div>
-              </form>
-            </section>
-          </div>
-        </section>
+                  <div class="admin-sidebar-tools">
+                    <div class="admin-side-note">
+                      <span class="tiny-badge">Queue Logic</span>
+                      <p>รายการจะอัปเดตตามคำค้นทันที และเมื่อสร้างสถานีใหม่ editor ด้านขวาจะเปลี่ยนไปเป็น draft สำหรับบันทึก record ใหม่</p>
+                    </div>
+
+                    <label class="field field-full">
+                      <span>ค้นหาสถานี</span>
+                      <input class="input" type="search" placeholder="เช่น ปตท. บางนา หรือ ptt-bangna-km5" data-admin-search />
+                    </label>
+
+                    <div class="admin-actions">
+                      <button class="button button-primary" type="button" data-admin-new>สร้างสถานีใหม่</button>
+                    </div>
+                  </div>
+
+                  <div class="admin-list-shell">
+                    <div class="admin-list-topline">
+                      <span class="tiny-badge">Live Queue</span>
+                      <span class="muted">เลือกจากคิวเพื่อโหลดข้อมูลเข้าสู่ editor</span>
+                    </div>
+                    <div class="admin-station-list" data-admin-list></div>
+                  </div>
+                </aside>
+
+                <section class="panel section-reveal delay-3 admin-panel-elevated admin-editor-panel">
+                  <div class="section-header admin-section-header">
+                    <div>
+                      <span class="eyebrow">Station Editor</span>
+                      <h2 data-admin-form-title>เลือกสถานีเพื่อแก้ไข</h2>
+                      <p data-admin-form-hint>เลือกสถานีจากคิวด้านซ้าย หรือกดสร้างสถานีใหม่เพื่อเริ่ม draft ใหม่</p>
+                    </div>
+                  </div>
+
+                  <div class="admin-editor-shell">
+                    <div class="admin-form-intro admin-form-intro-rich">
+                      <span class="tiny-badge">Canonical Station Data</span>
+                      <p>แผงนี้ใช้แก้ข้อมูลหลักของสถานีที่จะถูกนำไปใช้ต่อในแผนที่ ฟีด และการสรุปรายงาน จัดช่องกรอกเป็น 3 หมวดเพื่อลดการไล่หาฟิลด์</p>
+                    </div>
+
+                    <form class="form-grid admin-form admin-editor-form" data-admin-form>
+                      <input type="hidden" name="originalId" data-admin-original-id />
+
+                      <section class="admin-fieldset field-full">
+                        <div class="admin-fieldset-head">
+                          <div>
+                            <span class="tiny-badge">Identity</span>
+                            <h3>ข้อมูลอ้างอิงของสถานี</h3>
+                          </div>
+                          <p>ส่วนนี้กำหนดตัวตนของ record ที่จะถูกเรียกใช้งานจากหน้าสาธารณะ</p>
+                        </div>
+                        <div class="form-grid admin-fieldset-grid">
+                          <label class="field">
+                            <span>Document ID</span>
+                            <input class="input" type="text" name="stationId" placeholder="ptt-bangna-km5" data-admin-station-id />
+                          </label>
+
+                          <label class="field">
+                            <span>ชื่อสถานี</span>
+                            <input class="input" type="text" name="name" placeholder="ปตท. บางนา กม.5" data-admin-name />
+                          </label>
+
+                          <label class="field">
+                            <span>แบรนด์</span>
+                            <input class="input" type="text" name="brand" placeholder="ปตท." data-admin-brand />
+                          </label>
+
+                          <label class="field">
+                            <span>พื้นที่</span>
+                            <input class="input" type="text" name="area" placeholder="บางนา" data-admin-area />
+                          </label>
+                        </div>
+                      </section>
+
+                      <section class="admin-fieldset field-full">
+                        <div class="admin-fieldset-head">
+                          <div>
+                            <span class="tiny-badge">Geo + Media</span>
+                            <h3>พิกัด รูปภาพ และจำนวนรายงาน</h3>
+                          </div>
+                          <p>ใช้สำหรับเก็บข้อมูลที่ช่วยแสดงผลบนแผนที่และประกอบการตัดสินใจของผู้ใช้</p>
+                        </div>
+                        <div class="form-grid admin-fieldset-grid admin-fieldset-grid-tight">
+                          <label class="field">
+                            <span>Latitude</span>
+                            <input class="input" type="number" step="0.000001" name="latitude" placeholder="13.668000" data-admin-lat />
+                          </label>
+
+                          <label class="field">
+                            <span>Longitude</span>
+                            <input class="input" type="number" step="0.000001" name="longitude" placeholder="100.634000" data-admin-lng />
+                          </label>
+
+                          <label class="field">
+                            <span>จำนวนรายงานสะสม</span>
+                            <input class="input" type="number" min="0" step="1" name="reportCount" placeholder="0" data-admin-report-count />
+                          </label>
+
+                          <label class="field">
+                            <span>Photo URL</span>
+                            <input class="input" type="url" name="photoUrl" placeholder="https://..." data-admin-photo-url />
+                          </label>
+                        </div>
+                      </section>
+
+                      <section class="admin-fieldset field-full">
+                        <div class="admin-fieldset-head">
+                          <div>
+                            <span class="tiny-badge">Fuel Matrix</span>
+                            <h3>สถานะน้ำมันแต่ละชนิด</h3>
+                          </div>
+                          <p>ปรับภาพรวมความพร้อมของแต่ละชนิดเชื้อเพลิงในคราวเดียวก่อนบันทึก</p>
+                        </div>
+                        <div class="field field-full">
+                          <span>สถานะเชื้อเพลิง</span>
+                          <div class="admin-fuel-grid" data-admin-fuel-grid></div>
+                        </div>
+                      </section>
+
+                      <div class="field field-full admin-form-toolbar">
+                        <div class="admin-actions">
+                          <button class="button button-primary" type="submit" data-admin-save>บันทึกสถานี</button>
+                          <button class="button button-outline" type="button" data-admin-reset>รีเซ็ต</button>
+                          <button class="button button-danger" type="button" data-admin-delete>ลบสถานี</button>
+                        </div>
+                      </div>
+
+                      <div class="message-box field-full" aria-live="polite" data-admin-message></div>
+                    </form>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
+          <section class="section" id="admin-reports">
+            <div class="container">
+              <div class="admin-workbench">
+                <aside class="panel section-reveal delay-2 admin-sidebar admin-queue-panel">
+                  <div class="admin-sidebar-head">
+                    <div>
+                      <span class="eyebrow">Report Queue</span>
+                      <h2>จัดการรายงานที่ผู้ใช้ส่งเข้ามา</h2>
+                    </div>
+                    <p>ใช้สำหรับคัดกรองรายงานผิดพลาด เปลี่ยนสถานะ ย้าย stationId หรือเติมข้อมูลก่อน sync กลับสถานี</p>
+                  </div>
+
+                  <div class="admin-sidebar-tools">
+                    <div class="admin-side-note">
+                      <span class="tiny-badge">Review Queue</span>
+                      <p>รายงานแต่ละรายการจะมีสถานะเชื้อเพลิงและอายุข้อมูลให้ดูทันที ช่วยคัดงานเร่งด่วนได้จากคิวนี้เลย</p>
+                    </div>
+
+                    <label class="field field-full">
+                      <span>ค้นหารายงาน</span>
+                      <input class="input" type="search" placeholder="เช่น พัทยาใต้ หรือ report id" data-admin-report-search />
+                    </label>
+                  </div>
+
+                  <div class="admin-list-shell">
+                    <div class="admin-list-topline">
+                      <span class="tiny-badge">Review Feed</span>
+                      <span class="muted">เลือกจากรายการเพื่อเปิด report editor</span>
+                    </div>
+                    <div class="admin-report-list" data-admin-report-list></div>
+                  </div>
+                </aside>
+
+                <section class="panel section-reveal delay-3 admin-panel-elevated admin-editor-panel">
+                  <div class="section-header admin-section-header">
+                    <div>
+                      <span class="eyebrow">Report Editor</span>
+                      <h2 data-admin-report-title>เลือกรายงานเพื่อแก้ไข</h2>
+                      <p data-admin-report-hint>เลือกจากคิวด้านซ้าย แล้วแก้ข้อมูลให้เรียบร้อยก่อนบันทึกกลับ Firestore</p>
+                    </div>
+                  </div>
+
+                  <div class="admin-editor-shell">
+                    <div class="admin-form-intro admin-form-intro-rich">
+                      <span class="tiny-badge">User Submitted Data</span>
+                      <p>แผงนี้ใช้ตรวจข้อมูลที่ผู้ใช้ส่งเข้ามา ทั้งสถานี ข้อมูลผู้รายงาน สถานะน้ำมัน พิกัด รูปภาพ และ note ภายในทีม</p>
+                    </div>
+
+                    <form class="form-grid admin-form admin-editor-form" data-admin-report-form>
+                      <input type="hidden" name="originalId" data-admin-report-original-id />
+                      <input type="hidden" name="originalStationId" data-admin-report-original-station-id />
+
+                      <section class="admin-fieldset field-full">
+                        <div class="admin-fieldset-head">
+                          <div>
+                            <span class="tiny-badge">Reference</span>
+                            <h3>ตัวระบุของรายงานและสถานี</h3>
+                          </div>
+                          <p>ส่วนนี้ใช้ผูก report กับสถานีที่ควรถูก sync กลับไปหลังบันทึก</p>
+                        </div>
+                        <div class="form-grid admin-fieldset-grid">
+                          <label class="field">
+                            <span>Report ID</span>
+                            <input class="input" type="text" data-admin-report-id readonly />
+                          </label>
+
+                          <label class="field">
+                            <span>Station ID</span>
+                            <input class="input" type="text" name="stationId" placeholder="ptt-bangna-km5" data-admin-report-station-id />
+                          </label>
+
+                          <label class="field">
+                            <span>ชื่อสถานี</span>
+                            <input class="input" type="text" name="station" placeholder="ปตท. บางนา กม.5" data-admin-report-station />
+                          </label>
+
+                          <label class="field">
+                            <span>แบรนด์</span>
+                            <input class="input" type="text" name="brand" placeholder="ปตท." data-admin-report-brand />
+                          </label>
+
+                          <label class="field">
+                            <span>พื้นที่</span>
+                            <input class="input" type="text" name="area" placeholder="บางนา" data-admin-report-area />
+                          </label>
+
+                          <label class="field">
+                            <span>ผู้รายงาน</span>
+                            <input class="input" type="text" name="reporter" placeholder="ชื่อผู้ส่งรายงาน" data-admin-report-reporter />
+                          </label>
+                        </div>
+                      </section>
+
+                      <section class="admin-fieldset field-full">
+                        <div class="admin-fieldset-head">
+                          <div>
+                            <span class="tiny-badge">Status Payload</span>
+                            <h3>สถานะน้ำมัน พิกัด และรูปภาพ</h3>
+                          </div>
+                          <p>ใช้คัดกรอง payload ที่มีผลต่อหน้า public และการรวมข้อมูลของสถานี</p>
+                        </div>
+                        <div class="form-grid admin-fieldset-grid admin-fieldset-grid-tight">
+                          <label class="field">
+                            <span>เชื้อเพลิง</span>
+                            <select name="fuel" data-admin-report-fuel>
+                              <option value="diesel">ดีเซล</option>
+                              <option value="gas91">แก๊สโซฮอล์ 91</option>
+                              <option value="gas95">แก๊สโซฮอล์ 95</option>
+                              <option value="e20">E20</option>
+                              <option value="e85">E85</option>
+                              <option value="lpg">LPG</option>
+                            </select>
+                          </label>
+
+                          <label class="field">
+                            <span>สถานะ</span>
+                            <select name="status" data-admin-report-status>
+                              <option value="high">พร้อมจ่าย</option>
+                              <option value="medium">เหลือน้อย</option>
+                              <option value="low">ใกล้หมด</option>
+                              <option value="empty">หมด</option>
+                              <option value="unknown">ยังไม่มีข้อมูล</option>
+                            </select>
+                          </label>
+
+                          <label class="field">
+                            <span>Latitude</span>
+                            <input class="input" type="number" step="0.000001" name="latitude" placeholder="13.668000" data-admin-report-lat />
+                          </label>
+
+                          <label class="field">
+                            <span>Longitude</span>
+                            <input class="input" type="number" step="0.000001" name="longitude" placeholder="100.634000" data-admin-report-lng />
+                          </label>
+
+                          <label class="field">
+                            <span>Photo URL</span>
+                            <input class="input" type="url" name="photoUrl" placeholder="https://..." data-admin-report-photo-url />
+                          </label>
+
+                          <label class="field">
+                            <span>Photo Path</span>
+                            <input class="input" type="text" name="photoPath" placeholder="reports/uid/file.jpg" data-admin-report-photo-path />
+                          </label>
+                        </div>
+                      </section>
+
+                      <section class="admin-fieldset field-full">
+                        <div class="admin-fieldset-head">
+                          <div>
+                            <span class="tiny-badge">Internal Note</span>
+                            <h3>หมายเหตุสำหรับการตรวจทาน</h3>
+                          </div>
+                          <p>จดสาเหตุที่แก้ไขหรือรายละเอียดเพิ่มเติมของ report เพื่อให้ตามงานต่อได้ง่าย</p>
+                        </div>
+                        <label class="field field-full">
+                          <span>หมายเหตุ</span>
+                          <textarea name="note" placeholder="รายละเอียดเพิ่มเติมของรายงาน" data-admin-report-note></textarea>
+                        </label>
+                      </section>
+
+                      <div class="field field-full admin-form-toolbar">
+                        <div class="admin-actions">
+                          <button class="button button-primary" type="submit" data-admin-report-save>บันทึกรายงาน</button>
+                          <button class="button button-outline" type="button" data-admin-report-reset>รีเซ็ต</button>
+                          <button class="button button-danger" type="button" data-admin-report-delete>ลบรายงาน</button>
+                        </div>
+                      </div>
+
+                      <div class="message-box field-full" aria-live="polite" data-admin-report-message></div>
+                    </form>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
-
       <footer class="site-footer">
         <div class="container footer-inner">
           <span>Thairecheckpump Admin</span>
-          <span>หน้าหลังบ้านนี้ยังใช้ auth/rules ชุดเดียวกับโปรเจ็กต์ปัจจุบัน | <span data-year></span></span>
+          <span>แดชบอร์ดหลังบ้านนี้ยังใช้ auth และ rules ชุดเดียวกับโปรเจกต์หลัก | <span data-year></span></span>
         </div>
       </footer>
     </div>
