@@ -905,6 +905,155 @@ textarea:disabled {
   align-items: flex-start;
 }
 
+.home-fuel-price-meta {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.home-fuel-price-brand {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fuel-brand-badge {
+  --fuel-brand-start: #4f46e5;
+  --fuel-brand-end: #06b6d4;
+  --fuel-brand-text: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 16px 8px 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
+    rgba(9, 20, 30, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.fuel-brand-badge-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--fuel-brand-start), var(--fuel-brand-end));
+  color: var(--fuel-brand-text);
+  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.24);
+}
+
+.fuel-brand-badge-logo::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+}
+
+.fuel-brand-badge-logo::after {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 16px;
+  right: -5px;
+  bottom: -3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(-20deg);
+}
+
+.fuel-brand-badge-mark {
+  position: relative;
+  z-index: 1;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fuel-brand-badge-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.fuel-brand-badge-copy small {
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fuel-brand-badge-copy strong {
+  display: block;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+}
+
+.fuel-brand-badge--ptt {
+  --fuel-brand-start: #0f5fff;
+  --fuel-brand-end: #ff7c30;
+}
+
+.fuel-brand-badge--bcp {
+  --fuel-brand-start: #4fb84f;
+  --fuel-brand-end: #b7ea5f;
+  --fuel-brand-text: #082518;
+}
+
+.fuel-brand-badge--pt {
+  --fuel-brand-start: #0fc2c0;
+  --fuel-brand-end: #1f7cff;
+}
+
+.fuel-brand-badge--shell {
+  --fuel-brand-start: #ffd84d;
+  --fuel-brand-end: #ff8a33;
+  --fuel-brand-text: #3b1700;
+}
+
+.fuel-brand-badge--esso {
+  --fuel-brand-start: #f43f5e;
+  --fuel-brand-end: #ff7a59;
+}
+
+.fuel-brand-badge--susco {
+  --fuel-brand-start: #4ea2ff;
+  --fuel-brand-end: #9bd7ff;
+  --fuel-brand-text: #06223f;
+}
+
+.fuel-brand-badge--caltex {
+  --fuel-brand-start: #ef4444;
+  --fuel-brand-end: #3b82f6;
+}
+
+.fuel-brand-badge--irpc {
+  --fuel-brand-start: #fb7185;
+  --fuel-brand-end: #f97316;
+}
+
+.fuel-brand-badge--pure {
+  --fuel-brand-start: #34d399;
+  --fuel-brand-end: #14b8a6;
+  --fuel-brand-text: #05231b;
+}
+
+.fuel-brand-badge--suscodealers {
+  --fuel-brand-start: #60a5fa;
+  --fuel-brand-end: #38bdf8;
+  --fuel-brand-text: #05233c;
+}
+
+.fuel-brand-badge--generic {
+  --fuel-brand-start: #64748b;
+  --fuel-brand-end: #0f172a;
+}
+
 .home-fuel-price-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2031,6 +2180,15 @@ input[type="file"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .home-fuel-price-meta {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .home-fuel-price-brand {
+    justify-content: flex-start;
+  }
+
   .home-fuel-price-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2124,6 +2282,11 @@ input[type="file"] {
 
   .bar-row {
     grid-template-columns: 1fr;
+  }
+
+  .fuel-brand-badge {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .radar-stage,

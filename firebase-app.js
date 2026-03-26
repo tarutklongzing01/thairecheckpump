@@ -89,6 +89,18 @@ const FUEL_PRICE_BRAND_LABELS = {
   pure: "Pure",
   suscodealers: "SUSCO Dealers",
 };
+const FUEL_PRICE_BRAND_VISUALS = {
+  ptt: { mark: "PTT", className: "ptt" },
+  bcp: { mark: "BCP", className: "bcp" },
+  pt: { mark: "PT", className: "pt" },
+  shell: { mark: "Shell", className: "shell" },
+  esso: { mark: "Esso", className: "esso" },
+  susco: { mark: "SUSCO", className: "susco" },
+  caltex: { mark: "Caltex", className: "caltex" },
+  irpc: { mark: "IRPC", className: "irpc" },
+  pure: { mark: "Pure", className: "pure" },
+  suscodealers: { mark: "SUSCO", className: "suscodealers" },
+};
 const STATION_BRAND_TO_FUEL_PRICE_BRAND = {
   [BRANDS[0]]: "ptt",
   [BRANDS[1]]: "bcp",
@@ -963,6 +975,7 @@ function renderHomeFuelPrices(selectedFuelId, selectedBrands) {
 
   setText("[data-home-price-note]", note);
   setText("[data-home-price-updated]", updatedLabel);
+  renderHTML("[data-home-price-brand]", renderHomeFuelPriceBrandBadge(brandState));
   renderHTML(
     "[data-home-price-grid]",
     items.length
@@ -1028,6 +1041,65 @@ function getHomeFuelPriceItems(brandState) {
       note: "รออัปเดตราคา",
     };
   });
+}
+
+function renderHomeFuelPriceBrandBadge(brandState) {
+  const brand = brandState?.brand;
+  if (!brand) {
+    return "";
+  }
+
+  const brandId = normalizeFuelPriceBrandId(brand.id || brand.label);
+  const visual = getFuelPriceBrandVisual(brandId, brand.label);
+
+  return `
+    <div class="fuel-brand-badge fuel-brand-badge--${escapeHtml(visual.className)}">
+      <span class="fuel-brand-badge-logo" aria-hidden="true">
+        <span class="fuel-brand-badge-mark">${escapeHtml(visual.mark)}</span>
+      </span>
+      <span class="fuel-brand-badge-copy">
+        <small>Fuel Brand</small>
+        <strong>${escapeHtml(brand.label || visual.label)}</strong>
+      </span>
+    </div>
+  `;
+}
+
+function getFuelPriceBrandVisual(brandId, fallbackLabel) {
+  const normalizedId = normalizeFuelPriceBrandId(brandId);
+  const base = normalizedId ? FUEL_PRICE_BRAND_VISUALS[normalizedId] : null;
+  const label = String(fallbackLabel || (normalizedId ? FUEL_PRICE_BRAND_LABELS[normalizedId] : "") || "Fuel Brand").trim();
+
+  if (base) {
+    return {
+      ...base,
+      label,
+    };
+  }
+
+  return {
+    className: "generic",
+    mark: buildFuelPriceBrandMark(label),
+    label,
+  };
+}
+
+function buildFuelPriceBrandMark(label) {
+  const latin = String(label || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+  if (latin) {
+    return latin.slice(0, Math.min(6, latin.length));
+  }
+
+  const thai = String(label || "")
+    .replace(/[^\u0E00-\u0E7F0-9]/g, "")
+    .trim();
+  if (thai) {
+    return thai.slice(0, Math.min(3, thai.length));
+  }
+
+  return "Fuel";
 }
 
 function getHomeFuelPricesNote(brandState) {
