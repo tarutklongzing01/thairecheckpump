@@ -4164,17 +4164,24 @@ async function loadFuelPricesFromConfiguredSources() {
   }
 
   let lastError = null;
+  let fallbackNote = "";
   for (const endpoint of endpoints) {
     try {
       const payload = await fetchFuelPricesPayload(endpoint);
       store.fuelPrices = parseFuelPricesPayloadFromSource(payload, endpoint, {
         usedFallback: endpoint !== primaryEndpoint,
+        fallbackNote,
       });
       refreshCurrentPage();
       return true;
     } catch (error) {
       console.error(error);
       lastError = error;
+      if (!fallbackNote && endpoint === primaryEndpoint) {
+        fallbackNote = endpoint.includes("/api/fuel-prices")
+          ? "ไม่พบหรือเรียก /api/fuel-prices ไม่ได้ จึงใช้ไฟล์ราคาสำรอง"
+          : `ปลายทางราคาอ้างอิงหลักใช้งานไม่ได้ (${humanizeError(error)})`;
+      }
     }
   }
 
@@ -4201,6 +4208,17 @@ async function fetchFuelPricesPayload(endpoint) {
     throw new Error(`ไฟล์ราคาน้ำมันตอบกลับ ${response.status}`);
   }
 
+  if (!response.ok) {
+    const endpointPath = (() => {
+      try {
+        return new URL(endpoint, window.location.href).pathname || endpoint;
+      } catch (error) {
+        return endpoint;
+      }
+    })();
+    throw new Error(`${endpointPath} ตอบกลับ ${response.status}`);
+  }
+
   return response.json();
 }
 
@@ -4223,6 +4241,9 @@ function parseFuelPricesPayloadFromSource(payload, endpoint, options = {}) {
       : [];
   const items = brands.length ? defaultBrand?.items || [] : normalizeFuelPriceItems(rawItems);
   const noteParts = [String(payload?.note || "").trim()];
+  if (options.fallbackNote) {
+    noteParts.push(String(options.fallbackNote).trim());
+  }
   if (options.usedFallback) {
     noteParts.push("กำลังใช้ไฟล์ราคาสำรอง");
   }

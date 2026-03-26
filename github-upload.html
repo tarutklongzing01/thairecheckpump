@@ -6,11 +6,11 @@
     <title>GitHub Upload | Thairecheckpump</title>
     <meta
       name="description"
-      content="อัปโหลด stations-for-google-sheet.csv และ stations-public.json ขึ้น GitHub จากหน้าเดียว"
+      content="อัปไฟล์ข้อมูลสถานี และไฟล์เว็บ/API สำหรับ deploy ราคาน้ำมันอัตโนมัติขึ้น GitHub จากหน้าเดียว"
     />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=20260326-1" />
-    <script type="module" src="github-upload.js?v=20260326-1"></script>
+    <link rel="stylesheet" href="styles.css?v=20260326-2" />
+    <script type="module" src="github-upload.js?v=20260326-2"></script>
   </head>
   <body data-page="github-upload">
     <div class="site-shell">
@@ -20,7 +20,7 @@
             <span class="brand-mark"></span>
             <span class="brand-copy">
               <strong>Thairecheckpump</strong>
-              <small>GitHub uploader สำหรับไฟล์ export</small>
+              <small>GitHub uploader สำหรับข้อมูล + deploy bundle</small>
             </span>
           </a>
           <nav class="nav-list" aria-label="เมนูหลัก">
@@ -44,7 +44,7 @@
               <span class="tiny-badge" data-upload-summary-branch>Branch: main</span>
             </div>
             <div class="status-cluster">
-              <span class="muted">Token จะใช้ใน browser session นี้เท่านั้น และจะไม่ถูกบันทึกลง localStorage</span>
+              <span class="muted">ถ้าติ๊ก deploy bundle ระบบจะอัปไฟล์เว็บและ API ที่ทำให้หน้าแรกดึงราคาน้ำมันอัตโนมัติหลัง Vercel deploy</span>
             </div>
           </div>
         </div>
@@ -56,16 +56,16 @@
             <section class="panel section-reveal github-upload-hero-panel">
               <div class="github-upload-hero-head">
                 <span class="eyebrow">GitHub Sync</span>
-                <span class="tiny-badge">2-file commit flow</span>
+                <span class="tiny-badge">Data + Deploy</span>
               </div>
-              <h1 class="subheadline">อัปเดตไฟล์ export 2 ชุดขึ้น GitHub จากหน้าเดียว</h1>
+              <h1 class="subheadline">อัป 2 ไฟล์ข้อมูล พร้อมไฟล์เว็บ/API สำหรับ deploy ราคาน้ำมันอัตโนมัติจากหน้าเดียว</h1>
               <p class="lede">
-                หน้านี้ออกแบบให้ push ไฟล์ <code>stations-for-google-sheet.csv</code> และ
-                <code>stations-public.json</code> เข้าสู่ repo ได้ทันทีผ่าน GitHub API โดยไม่ต้องเปิด git command เอง
+                ใช้หน้านี้เพื่อ commit ข้อมูลสถานีขึ้น GitHub ตามปกติ และถ้าต้องการให้เว็บ production ดึงราคาน้ำมันจาก Kapook ได้ทันที
+                ก็ให้รวม deploy bundle เข้า commit เดียวกันได้เลย
               </p>
               <div class="page-hero-actions">
-                <a class="button button-primary" href="#github-upload-form">ตั้งค่าแล้วอัปโหลด</a>
-                <a class="button button-outline" href="admin.html">กลับไปหน้า Admin</a>
+                <a class="button button-primary" href="#github-upload-form">ตั้งค่าแล้วอัปขึ้น GitHub</a>
+                <a class="button button-outline" href="index.html">กลับหน้าเว็บ</a>
               </div>
             </section>
 
@@ -73,29 +73,30 @@
               <div class="admin-sidebar-head admin-sidebar-head-tight">
                 <div>
                   <span class="eyebrow">Flow</span>
-                  <h2>สิ่งที่หน้านี้ทำให้</h2>
+                  <h2>หน้ารวมสำหรับ data และ deploy</h2>
                 </div>
-                <p>อ่านไฟล์จากเครื่องหรือจากโปรเจกต์ปัจจุบัน แล้วสร้าง commit เดียวที่อัปเดตทั้ง 2 ไฟล์พร้อมกัน</p>
+                <p>ถ้า repo นี้เชื่อมกับ Vercel อยู่แล้ว การ push code bundle ขึ้น branch ที่ deploy จะทำให้ `/api/fuel-prices` ถูกปล่อยตามไปด้วย</p>
               </div>
               <div class="github-upload-summary-grid">
                 <div class="stat-card">
-                  <span>ไฟล์เป้าหมาย</span>
+                  <span>ไฟล์ข้อมูล</span>
                   <strong>2</strong>
-                  <small data-upload-summary-files>CSV + JSON ใน root ของ repo</small>
+                  <small data-upload-summary-files>stations-for-google-sheet.csv + stations-public.json</small>
                 </div>
                 <div class="stat-card">
-                  <span>ค่าเริ่มต้น</span>
-                  <strong data-upload-summary-short-repo>thairecheckpump</strong>
-                  <small>owner / repo / branch แก้ได้ก่อนอัปโหลด</small>
+                  <span>Deploy bundle</span>
+                  <strong data-upload-deploy-count>7 files</strong>
+                  <small>index + firebase + api/fuel-prices + uploader</small>
                 </div>
                 <div class="stat-card">
                   <span>ความปลอดภัย</span>
-                  <strong>Session</strong>
-                  <small>token ไม่ถูกเก็บถาวรในหน้าเว็บนี้</small>
+                  <strong data-upload-summary-short-repo>thairecheckpump</strong>
+                  <small>ใช้ Fine-grained token ที่มีสิทธิ์ Contents: Read and write</small>
                 </div>
               </div>
               <p class="github-upload-warning">
-                แนะนำให้ใช้ Fine-grained Personal Access Token ที่มีสิทธิ์ <code>Contents: Read and write</code> เฉพาะ repo นี้
+                ถ้าเปิดหน้า uploader จากเว็บ live แล้วต้องการ push ไฟล์โค้ดใหม่ ให้เลือกโฟลเดอร์โปรเจกต์จากเครื่องก่อน
+                เพื่อให้ browser อ่านไฟล์ที่ยังไม่ถูก deploy ได้
               </p>
             </aside>
           </div>
@@ -107,9 +108,9 @@
               <div class="section-header">
                 <div>
                   <span class="eyebrow">Repository Setup</span>
-                  <h2>ตั้งค่า repo และไฟล์ที่จะอัป</h2>
+                  <h2>ตั้งค่า repo และไฟล์ที่ต้องอัป</h2>
                 </div>
-                <p>ถ้าไม่เลือกไฟล์จากเครื่อง ระบบจะพยายามใช้ไฟล์ชื่อเดียวกันจากโปรเจกต์ปัจจุบันแทน</p>
+                <p>ถ้าไม่เลือกไฟล์จากเครื่อง ระบบจะพยายามอ่านจากโปรเจกต์ปัจจุบันก่อน แล้วค่อย commit ขึ้น GitHub ผ่าน API</p>
               </div>
 
               <form class="form-grid github-upload-form" data-github-upload-form>
@@ -143,8 +144,39 @@
                   <div class="github-upload-actions github-upload-token-actions">
                     <button class="button button-ghost" type="button" data-upload-clear-token hidden>ล้าง token ที่จำไว้</button>
                   </div>
-                  <small class="form-note">ถ้าติ๊กจำ token ระบบจะเก็บไว้ใน browser ของเครื่องนี้เท่านั้น เหมาะกับเครื่องส่วนตัว ไม่ควรใช้กับเครื่องที่มีคนอื่นเข้าถึงได้</small>
+                  <small class="form-note">ควรใช้เฉพาะเครื่องส่วนตัว ถ้าเป็นเครื่องคนอื่นหรือเครื่องสาธารณะไม่ควรเปิดตัวเลือกนี้</small>
                 </label>
+
+                <article class="field field-full github-upload-file-card github-upload-deploy-card">
+                  <div class="github-upload-card-head">
+                    <div>
+                      <span class="tiny-badge">Deploy Bundle</span>
+                      <h3>รวมไฟล์เว็บ + API สำหรับราคาน้ำมันอัตโนมัติ</h3>
+                      <p>อัปไฟล์ที่จำเป็นให้ Vercel deploy แล้วหน้าแรกเรียก `/api/fuel-prices` ได้ทันที</p>
+                    </div>
+                  </div>
+
+                  <label class="github-upload-remember">
+                    <input type="checkbox" data-upload-include-deploy-bundle checked />
+                    <span>รวม deploy bundle ไปพร้อม commit นี้</span>
+                  </label>
+
+                  <label class="field">
+                    <span>Project Folder จากเครื่อง (แนะนำถ้าเปิด uploader จากเว็บ live)</span>
+                    <input class="input" type="file" webkitdirectory directory multiple data-upload-project-folder />
+                    <small class="form-note" data-upload-deploy-summary></small>
+                  </label>
+
+                  <div class="github-upload-deploy-list" aria-label="deploy bundle file list">
+                    <code>api/fuel-prices.js</code>
+                    <code>firebase-app.js</code>
+                    <code>firebase-config.js</code>
+                    <code>index.html</code>
+                    <code>github-upload.html</code>
+                    <code>github-upload.js</code>
+                    <code>styles.css</code>
+                  </div>
+                </article>
 
                 <div class="field field-full github-upload-files">
                   <article class="github-upload-file-card" data-upload-card="sheet">
@@ -207,7 +239,7 @@
                 </div>
 
                 <div class="field field-full github-upload-actions">
-                  <button class="button button-primary" type="submit" data-upload-submit>อัปทั้ง 2 ไฟล์ขึ้น GitHub</button>
+                  <button class="button button-primary" type="submit" data-upload-submit>อัป 2 ไฟล์ + deploy bundle</button>
                   <button class="button button-outline" type="button" data-upload-reset>คืนค่า default</button>
                 </div>
 
@@ -222,7 +254,7 @@
                   <span class="eyebrow">Run Log</span>
                   <h2>ลำดับการทำงาน</h2>
                 </div>
-                <p>หน้าเว็บจะ log ขั้นตอนหลักของการอ่านไฟล์ สร้าง blob, tree, commit และอัปเดต branch ให้ดูได้จากมุมนี้</p>
+                <p>ระบบจะ log ขั้นตอนตั้งแต่เตรียมไฟล์ สร้าง blob/tree/commit ไปจนถึงอัปเดต branch</p>
               </div>
               <ol class="github-upload-log" data-upload-log></ol>
             </aside>
@@ -233,9 +265,47 @@
       <footer class="site-footer">
         <div class="container footer-inner">
           <span>Thairecheckpump GitHub Upload</span>
-          <span>อัปเดตไฟล์ export ผ่าน GitHub API | <span data-year></span></span>
+          <span>อัปไฟล์ข้อมูลและ deploy bundle ผ่าน GitHub API | <span data-year></span></span>
         </div>
       </footer>
     </div>
-  </body>
+  <!-- Code injected by live-server -->
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
+</body>
 </html>

@@ -2483,6 +2483,13 @@ input[type="file"] {
     rgba(7, 20, 30, 0.78);
 }
 
+.github-upload-deploy-card {
+  border-color: rgba(255, 209, 102, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 209, 102, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(7, 20, 30, 0.78);
+}
+
 .github-upload-card-head {
   display: flex;
   align-items: flex-start;
@@ -2514,6 +2521,24 @@ input[type="file"] {
   background: rgba(255, 209, 102, 0.08);
   color: #ffe8b3;
   line-height: 1.7;
+}
+
+.github-upload-deploy-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.github-upload-deploy-list code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 209, 102, 0.18);
+  background: rgba(255, 209, 102, 0.08);
+  color: #ffe8b3;
+  font-size: 0.9rem;
 }
 
 .github-upload-actions {

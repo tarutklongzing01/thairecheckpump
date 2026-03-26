@@ -1,16 +1,5 @@
 const SETTINGS_STORAGE_KEY = "thairecheckpump-github-upload-settings-v1";
 const TOKEN_STORAGE_KEY = "thairecheckpump-github-upload-token-v1";
-const DEFAULT_SETTINGS = {
-  owner: "tarutklongzing01",
-  repo: "thairecheckpump",
-  branch: "main",
-  message: "chore(data): update station export files",
-  rememberToken: false,
-  paths: {
-    sheet: "stations-for-google-sheet.csv",
-    public: "stations-public.json",
-  },
-};
 
 const FILES = [
   {
@@ -25,9 +14,33 @@ const FILES = [
   },
 ];
 
+const DEPLOY_BUNDLE_FILES = [
+  { path: "api/fuel-prices.js", label: "Fuel price API" },
+  { path: "firebase-app.js", label: "Home app loader" },
+  { path: "firebase-config.js", label: "Runtime config" },
+  { path: "index.html", label: "Homepage entry" },
+  { path: "github-upload.html", label: "Uploader page" },
+  { path: "github-upload.js", label: "Uploader logic" },
+  { path: "styles.css", label: "Shared styles" },
+];
+
+const DEFAULT_SETTINGS = {
+  owner: "tarutklongzing01",
+  repo: "thairecheckpump",
+  branch: "main",
+  message: "chore(data): update station export files",
+  rememberToken: false,
+  includeDeployBundle: true,
+  paths: {
+    sheet: "stations-for-google-sheet.csv",
+    public: "stations-public.json",
+  },
+};
+
 const state = {
   busy: false,
   cards: new Map(),
+  projectDirectoryFiles: new Map(),
 };
 
 document.addEventListener("DOMContentLoaded", initializePage);
@@ -41,6 +54,9 @@ function initializePage() {
   state.tokenInput = document.querySelector("[data-upload-token]");
   state.rememberTokenInput = document.querySelector("[data-upload-remember-token]");
   state.clearTokenButton = document.querySelector("[data-upload-clear-token]");
+  state.includeDeployBundleInput = document.querySelector("[data-upload-include-deploy-bundle]");
+  state.projectFolderInput = document.querySelector("[data-upload-project-folder]");
+  state.deploySummary = document.querySelector("[data-upload-deploy-summary]");
   state.submitButton = document.querySelector("[data-upload-submit]");
   state.resetButton = document.querySelector("[data-upload-reset]");
   state.messageBox = document.querySelector("[data-upload-message]");
@@ -50,6 +66,7 @@ function initializePage() {
   state.summaryBranch = document.querySelector("[data-upload-summary-branch]");
   state.summaryShortRepo = document.querySelector("[data-upload-summary-short-repo]");
   state.summaryFiles = document.querySelector("[data-upload-summary-files]");
+  state.deployCount = document.querySelector("[data-upload-deploy-count]");
 
   document.querySelectorAll("[data-year]").forEach((node) => {
     node.textContent = String(new Date().getFullYear());
@@ -125,10 +142,27 @@ function initializePage() {
     renderTokenControls();
   });
 
+  state.includeDeployBundleInput?.addEventListener("change", () => {
+    persistSettings();
+    renderSummary();
+    renderDeploySummary();
+    renderSubmitButton();
+  });
+
+  state.projectFolderInput?.addEventListener("change", () => {
+    indexProjectDirectory(state.projectFolderInput.files);
+    renderSummary();
+    renderDeploySummary();
+    const fileCount = state.projectDirectoryFiles.size;
+    appendLog(fileCount ? `Indexed project folder entries: ${fileCount}` : "Project folder selection cleared");
+  });
+
   renderSummary();
   renderTokenControls();
+  renderDeploySummary();
+  renderSubmitButton();
   setMessage("");
-  appendLog("พร้อมอัปโหลดไฟล์ขึ้น GitHub");
+  appendLog("พร้อมอัปขึ้น GitHub");
 }
 
 function loadSavedSettings() {
@@ -145,6 +179,7 @@ function loadSavedSettings() {
       branch: typeof parsed.branch === "string" ? parsed.branch : DEFAULT_SETTINGS.branch,
       message: typeof parsed.message === "string" ? parsed.message : DEFAULT_SETTINGS.message,
       rememberToken: parsed.rememberToken === true,
+      includeDeployBundle: parsed.includeDeployBundle !== false,
       paths: {
         sheet: typeof parsed?.paths?.sheet === "string" ? parsed.paths.sheet : DEFAULT_SETTINGS.paths.sheet,
         public: typeof parsed?.paths?.public === "string" ? parsed.paths.public : DEFAULT_SETTINGS.paths.public,
@@ -172,6 +207,9 @@ function applySettings(settings) {
   if (state.rememberTokenInput) {
     state.rememberTokenInput.checked = settings.rememberToken === true;
   }
+  if (state.includeDeployBundleInput) {
+    state.includeDeployBundleInput.checked = settings.includeDeployBundle !== false;
+  }
   if (state.tokenInput) {
     state.tokenInput.value = settings.rememberToken ? loadSavedToken() : "";
   }
@@ -194,6 +232,7 @@ function persistSettings() {
     branch: state.branchInput?.value.trim() || DEFAULT_SETTINGS.branch,
     message: state.messageInput?.value.trim() || DEFAULT_SETTINGS.message,
     rememberToken: state.rememberTokenInput?.checked === true,
+    includeDeployBundle: state.includeDeployBundleInput?.checked !== false,
     paths: {
       sheet: state.cards.get("sheet")?.pathInput?.value.trim() || DEFAULT_SETTINGS.paths.sheet,
       public: state.cards.get("public")?.pathInput?.value.trim() || DEFAULT_SETTINGS.paths.public,
@@ -243,6 +282,9 @@ function renderSummary() {
   const owner = state.ownerInput?.value.trim() || DEFAULT_SETTINGS.owner;
   const repo = state.repoInput?.value.trim() || DEFAULT_SETTINGS.repo;
   const branch = state.branchInput?.value.trim() || DEFAULT_SETTINGS.branch;
+  const sheetPath = state.cards.get("sheet")?.pathInput?.value.trim() || DEFAULT_SETTINGS.paths.sheet;
+  const publicPath = state.cards.get("public")?.pathInput?.value.trim() || DEFAULT_SETTINGS.paths.public;
+  const includeDeployBundle = state.includeDeployBundleInput?.checked !== false;
 
   if (state.summaryRepo) {
     state.summaryRepo.textContent = `Repo: ${owner}/${repo}`;
@@ -254,10 +296,44 @@ function renderSummary() {
     state.summaryShortRepo.textContent = repo || DEFAULT_SETTINGS.repo;
   }
   if (state.summaryFiles) {
-    const sheetPath = state.cards.get("sheet")?.pathInput?.value.trim() || DEFAULT_SETTINGS.paths.sheet;
-    const publicPath = state.cards.get("public")?.pathInput?.value.trim() || DEFAULT_SETTINGS.paths.public;
-    state.summaryFiles.textContent = `${sheetPath} + ${publicPath}`;
+    state.summaryFiles.textContent = includeDeployBundle
+      ? `${sheetPath} + ${publicPath} + deploy bundle (${DEPLOY_BUNDLE_FILES.length} files)`
+      : `${sheetPath} + ${publicPath}`;
   }
+  if (state.deployCount) {
+    state.deployCount.textContent = `${DEPLOY_BUNDLE_FILES.length} files`;
+  }
+}
+
+function renderDeploySummary() {
+  if (!state.deploySummary) {
+    return;
+  }
+
+  const includeDeployBundle = state.includeDeployBundleInput?.checked !== false;
+  if (!includeDeployBundle) {
+    state.deploySummary.textContent = "ตอนนี้จะอัปเฉพาะ 2 ไฟล์ข้อมูลเท่านั้น";
+    return;
+  }
+
+  if (state.projectDirectoryFiles.size) {
+    state.deploySummary.textContent = `จะอ่านไฟล์ deploy bundle ${DEPLOY_BUNDLE_FILES.length} ไฟล์จากโฟลเดอร์โปรเจกต์ที่เลือก`;
+    return;
+  }
+
+  state.deploySummary.textContent =
+    "ถ้าเปิดหน้านี้จากโปรเจกต์ปัจจุบัน ระบบจะอ่านไฟล์ bundle ตรงได้เลย แต่ถ้าเปิดจากเว็บ live ให้เลือกโฟลเดอร์โปรเจกต์จากเครื่องก่อนเพื่อให้อัปไฟล์โค้ดใหม่ได้";
+}
+
+function renderSubmitButton() {
+  if (!state.submitButton || state.busy) {
+    return;
+  }
+
+  state.submitButton.textContent =
+    state.includeDeployBundleInput?.checked !== false
+      ? `อัป 2 ไฟล์ + deploy bundle (${DEPLOY_BUNDLE_FILES.length} ไฟล์)`
+      : "อัปทั้ง 2 ไฟล์ขึ้น GitHub";
 }
 
 function renderCardState(cardState) {
@@ -313,7 +389,7 @@ async function handleSubmit(event) {
   try {
     appendLog(`Preparing files for ${owner}/${repo}@${branch}`);
 
-    const uploadFiles = await Promise.all(FILES.map((file) => resolveUploadFile(state.cards.get(file.key))));
+    const uploadFiles = await buildUploadFiles();
     uploadFiles.forEach((file) => {
       appendLog(`Ready ${file.path} from ${file.sourceLabel} (${formatBytes(file.size)})`);
     });
@@ -343,6 +419,26 @@ async function handleSubmit(event) {
   }
 }
 
+async function buildUploadFiles() {
+  const uploadFiles = await Promise.all(FILES.map((file) => resolveUploadFile(state.cards.get(file.key))));
+
+  if (state.includeDeployBundleInput?.checked !== false) {
+    appendLog(`Including deploy bundle (${DEPLOY_BUNDLE_FILES.length} files)`);
+    const deployFiles = await Promise.all(DEPLOY_BUNDLE_FILES.map((file) => resolveDeployBundleFile(file)));
+    uploadFiles.push(...deployFiles);
+  }
+
+  return dedupeUploadFiles(uploadFiles);
+}
+
+function dedupeUploadFiles(files) {
+  const map = new Map();
+  files.forEach((file) => {
+    map.set(file.path, file);
+  });
+  return Array.from(map.values());
+}
+
 function handleReset() {
   if (state.tokenInput) {
     state.tokenInput.value = "";
@@ -350,6 +446,14 @@ function handleReset() {
   if (state.rememberTokenInput) {
     state.rememberTokenInput.checked = false;
   }
+  if (state.includeDeployBundleInput) {
+    state.includeDeployBundleInput.checked = DEFAULT_SETTINGS.includeDeployBundle;
+  }
+  if (state.projectFolderInput) {
+    state.projectFolderInput.value = "";
+  }
+
+  state.projectDirectoryFiles = new Map();
 
   state.cards.forEach((cardState) => {
     if (cardState.fileInput) {
@@ -363,6 +467,8 @@ function handleReset() {
   state.cards.forEach((cardState) => renderCardState(cardState));
   renderSummary();
   renderTokenControls();
+  renderDeploySummary();
+  renderSubmitButton();
   setMessage("คืนค่า default แล้ว");
   state.resultBox.textContent = "";
   clearLog();
@@ -388,6 +494,26 @@ function handleClearRememberedToken() {
   setMessage("ล้าง token ที่จำไว้แล้ว");
 }
 
+function indexProjectDirectory(fileList) {
+  const nextFiles = new Map();
+
+  Array.from(fileList || []).forEach((file) => {
+    const relativePath = normalizeRelativePath(file.webkitRelativePath || file.name);
+    if (!relativePath) {
+      return;
+    }
+
+    nextFiles.set(relativePath, file);
+
+    const parts = relativePath.split("/");
+    for (let index = 1; index < parts.length; index += 1) {
+      nextFiles.set(parts.slice(index).join("/"), file);
+    }
+  });
+
+  state.projectDirectoryFiles = nextFiles;
+}
+
 async function resolveUploadFile(cardState) {
   if (!cardState) {
     throw new Error("Missing upload card configuration");
@@ -399,38 +525,73 @@ async function resolveUploadFile(cardState) {
   }
 
   const selectedFile = cardState.fileInput?.files?.[0] || null;
-  let blob = selectedFile;
-  let sourceLabel = selectedFile ? `local file ${selectedFile.name}` : cardState.fileName;
-
-  if (!blob) {
-    const sourceUrl = new URL(cardState.fileName, window.location.href);
-    sourceUrl.searchParams.set("ts", String(Date.now()));
-
-    let response;
-    try {
-      response = await fetch(sourceUrl.toString(), {
-        cache: "no-store",
-      });
-    } catch (error) {
-      throw new Error(`อ่าน ${cardState.fileName} จากหน้าเว็บไม่สำเร็จ กรุณาเลือกไฟล์จากเครื่องแทน`);
-    }
-
-    if (!response.ok) {
-      throw new Error(`ไม่พบ ${cardState.fileName} บนหน้าเว็บนี้ (${response.status}) กรุณาเลือกไฟล์จากเครื่องแทน`);
-    }
-
-    blob = await response.blob();
-    sourceLabel = `project file ${cardState.fileName}`;
+  if (selectedFile) {
+    return createUploadPayload(targetPath, selectedFile, `local file ${selectedFile.name}`);
   }
 
-  const content = await blobToBase64(blob);
+  const loaded = await loadProjectBlob(cardState.fileName, {
+    missingHint: "กรุณาเลือกไฟล์จากเครื่องแทน",
+  });
 
+  return createUploadPayload(targetPath, loaded.blob, loaded.sourceLabel);
+}
+
+async function resolveDeployBundleFile(file) {
+  const loaded = await loadProjectBlob(file.path, {
+    missingHint: "ถ้าเปิด uploader จากเว็บ live ให้เลือกโฟลเดอร์โปรเจกต์จากเครื่องก่อน",
+  });
+
+  return createUploadPayload(file.path, loaded.blob, loaded.sourceLabel);
+}
+
+async function createUploadPayload(path, blob, sourceLabel) {
   return {
-    path: targetPath,
-    content,
+    path,
+    content: await blobToBase64(blob),
     size: blob.size,
     sourceLabel,
   };
+}
+
+async function loadProjectBlob(relativePath, options = {}) {
+  const normalizedPath = normalizeRelativePath(relativePath);
+  const folderFile = state.projectDirectoryFiles.get(normalizedPath);
+
+  if (folderFile) {
+    return {
+      blob: folderFile,
+      sourceLabel: `selected project folder ${normalizedPath}`,
+    };
+  }
+
+  const sourceUrl = new URL(normalizedPath, window.location.href);
+  sourceUrl.searchParams.set("ts", String(Date.now()));
+
+  let response;
+  try {
+    response = await fetch(sourceUrl.toString(), {
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new Error(`อ่าน ${normalizedPath} จากหน้านี้ไม่สำเร็จ. ${options.missingHint || "กรุณาเลือกไฟล์จากเครื่อง"}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`ไม่พบ ${normalizedPath} จากหน้านี้ (${response.status}). ${options.missingHint || "กรุณาเลือกไฟล์จากเครื่อง"}`);
+  }
+
+  return {
+    blob: await response.blob(),
+    sourceLabel: `project file ${normalizedPath}`,
+  };
+}
+
+function normalizeRelativePath(value) {
+  return String(value || "")
+    .replaceAll("\\", "/")
+    .replace(/^\/+/, "")
+    .replace(/^\.\//, "")
+    .trim();
 }
 
 async function createCommit({ owner, repo, branch, message, token, files }) {
@@ -471,7 +632,7 @@ async function createCommit({ owner, repo, branch, message, token, files }) {
         type: "blob",
         sha: blob.sha,
       };
-    }),
+    })
   );
 
   appendLog("Creating tree");
@@ -571,7 +732,7 @@ function blobToBase64(blob) {
 function setBusyState(busy) {
   if (state.submitButton) {
     state.submitButton.disabled = busy;
-    state.submitButton.textContent = busy ? "กำลังอัปโหลด..." : "อัปทั้ง 2 ไฟล์ขึ้น GitHub";
+    state.submitButton.textContent = busy ? "กำลังอัปโหลด..." : "";
   }
   if (state.resetButton) {
     state.resetButton.disabled = busy;
@@ -594,11 +755,22 @@ function setBusyState(busy) {
       input.disabled = busy;
     }
   });
+
   if (state.rememberTokenInput) {
     state.rememberTokenInput.disabled = busy;
   }
   if (state.clearTokenButton) {
     state.clearTokenButton.disabled = busy;
+  }
+  if (state.includeDeployBundleInput) {
+    state.includeDeployBundleInput.disabled = busy;
+  }
+  if (state.projectFolderInput) {
+    state.projectFolderInput.disabled = busy;
+  }
+
+  if (!busy) {
+    renderSubmitButton();
   }
 }
 
